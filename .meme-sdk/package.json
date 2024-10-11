@@ -1,0 +1,37 @@
+{
+	"name": "meme-sdk",
+	"version": "5.33.47",
+	"description": "SDK JavaScript",
+	"keywords": [
+		"framework",
+		"nube",
+		"componentes",
+		"micro",
+		"frontend",
+		"micro-frontend",
+		"mini-frontend",
+		"atomic-frontend",
+		"SDK",
+		"SSR",
+		"Server-side rendering",
+		"SSGs",
+		"Static Site Generators"
+	],
+	"main": "./03_Execs/cli.js",
+	"scripts": {
+		"deploy": "cp ./03_Execs/cli.js ../me && npm publish"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jesus-aldrete/meme.js"
+	},
+	"author": "Jesus Aldrete <jesus@aldrete.pro>",
+	"maintainers": ["Jesus Aldrete <jesus@aldrete.pro>"],
+	"homepage": "https://aldrete.pro",
+	"preferGlobal": true,
+	"bin": {
+		"me"      : "./03_Execs/cli.js",
+		"meme-sdk": "./03_Execs/cli.js",
+		"me-watch": "./03_Execs/watcher.js"
+	}
+}

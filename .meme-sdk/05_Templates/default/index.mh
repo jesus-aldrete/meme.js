@@ -1,0 +1,5 @@
+link rel="icon" href="[[RES]]/recursos/favicon.svg" type="image/x-icon"/
+
+mx_scripts core=true animate=true
+mx_theme
+me_init

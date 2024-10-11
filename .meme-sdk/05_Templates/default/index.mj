@@ -1,0 +1,390 @@
+class me_init {
+	// front-private
+	img            = null;
+	ctx            = null;
+	start          = false;
+	img_width      = 0;
+	img_height     = 0;
+	curtain_width  = 0;
+	curtain_speed  = 8;
+	start_audio    = null;
+	bucle_audio    = null;
+	start_location = false;
+
+	// front-private
+	RenderCurtain() {
+		ctx.clearRect(      0            , 0, refs.canvas.width, refs.canvas.height                                                                               );
+		ctx.drawImage( img, 0            , 0, img_width / 2    , img_height, -curtain_width                        , 0, refs.canvas.width / 2, refs.canvas.height );
+		ctx.drawImage( img, img_width / 2, 0, img_width / 2    , img_height,  refs.canvas.width / 2 + curtain_width, 0, refs.canvas.width / 2, refs.canvas.height );
+
+		if ( curtain_width<( refs.canvas.width / 2 ) ) {
+			curtain_width+= curtain_speed;
+
+			if ( start ) {
+				requestAnimationFrame( RenderCurtain );
+			}
+		}
+	}
+	StartLocation() {
+		const pat = window.location.pathname.split( '/' );
+
+		if ( pat[1] ) {
+			this.Trigger( 'mx/router/push', '/' );
+		}
+
+		start_location = true;
+	}
+	StartFunction() {
+		start = true;
+
+		RenderCurtain();
+		start_audio.Play();
+
+		setTimeout( ()=>{ start_audio.Stop() }, 1000 );
+		setTimeout( ()=>{ bucle_audio.Play() }, 970  );
+	}
+
+	async LoopAudio   ( url_audio, ganancia=.1 ) {
+		const context  = new ( window.AudioContext || window.webkitAudioContext )();
+		const response = await fetch( url_audio );
+
+		if ( !response.ok ) { console.error( `no se pudo cargar el audio: ${url_audio}` ); return null; }
+
+		let   current_source;
+		const array_buffer  = await response.arrayBuffer();
+		const buffer        = await context.decodeAudioData( array_buffer );
+		const gain_node     = context.createGain();
+		const stop          = () => {
+			if ( current_source ) {
+				current_source.stop();
+
+				current_source = null;
+			}
+		};
+		const play          = () => {
+			stop();
+
+			const source  = context.createBufferSource();
+			source.buffer = buffer;
+			source.loop   = true;
+
+			source   .connect( gain_node           );
+			gain_node.connect( context.destination );
+			source   .start  ( 0                   );
+
+			current_source = source;
+		};
+
+		gain_node.gain.value = ganancia;
+
+		return { Play:play, Stop:stop };
+	}
+	async DownloadMenu(                        ) {
+		await import( '[[host_meme]]/me_menu.js' );
+
+		this.Add('<me-menu class="menu"></me-menu>');
+	}
+
+	// front-public
+	View () {
+		! \
+			(click)=onClickAnchor\
+			(mx/router/change)=onChange
+
+		&.me_layout
+
+		mx_loader*loader
+		mx_router
+		mx_button.btn_play (click)=onClick>[mx_svg*icon icon=fill:stop loaded={*['fill:stop','fill:play']}] mute
+
+		canvas*canvas
+		*cont
+			h1.title>Meme Init Page
+			.images
+				img.logo                 src="[[RES]]/recursos/logo.svg"
+				img.reloj.reloj1         src="[[RES]]/recursos/reloj.gif"
+				img.gusano.gusano1       src="[[RES]]/recursos/gusano.gif"
+				img.tostadora.tostadora1 src="[[RES]]/recursos/tostadora.gif"
+				img.voca.voca1           src="[[RES]]/recursos/voca.gif"
+				img.tostadora.tostadora2 src="[[RES]]/recursos/tostadora.gif"
+				img.reloj.reloj2         src="[[RES]]/recursos/reloj.gif"
+				img.campana.campana1     src="[[RES]]/recursos/campana.gif"
+				img.gusano.gusano2       src="[[RES]]/recursos/gusano.gif"
+				img.gusano.gusano3       src="[[RES]]/recursos/gusano.gif"
+				img.tostadora.tostadora3 src="[[RES]]/recursos/tostadora.gif"
+				img.gusano.gusano4       src="[[RES]]/recursos/gusano.gif"
+				img.campana.campana2     src="[[RES]]/recursos/campana.gif"
+				img.voca.voca2           src="[[RES]]/recursos/voca.gif"
+				img.tostadora.tostadora4 src="[[RES]]/recursos/tostadora.gif"
+				img.reloj.reloj3         src="[[RES]]/recursos/reloj.gif"
+	}
+	Style() {
+		@theme-light
+			--me_layout--back  : $back
+			--me_layout--border: $back_30
+			--me_layout--shadow: rgba(0, 0, 0, 0.25)
+		@theme-dark
+			--me_layout--back  : $back_10
+			--me_layout--border: $back_20
+			--me_layout--shadow: rgba(0, 0, 0, 0.25)
+
+		background-color: $me_layout--back
+		border-radius   : 15
+		border          : solid 1 $me_layout--border
+		box-shadow      : 0 0 30 0 $me_layout--shadow
+		height          : 800
+		left            : 50%
+		position        : absolute
+		top             : 50%
+		transform       : translate(-50%,-50%)
+		width           : 1000
+		>.btn_play
+			border-radius: 3
+			bottom       : -20
+			padding      : 2
+			position     : absolute
+			transform    : translateY(100%)
+		>.menu
+			border-radius : 14 14 0 0
+			left          : 0
+			padding       : 15
+			pointer-events: none
+			position      : absolute
+			right         : 0
+			top           : 0
+			z-index       : 5
+		>.loader
+			height  : 100%
+			left    : 0
+			position: absolute
+			top     : 0
+			width   : 100%
+			z-index : 11
+		>.canvas
+			border-radius : 15
+			height        : calc(100% + 50px)
+			left          : -3
+			pointer-events: none
+			position      : absolute
+			top           : 0
+			width         : calc(100% + 3px)
+			z-index       : 6
+		>.cont
+			height : 100%
+			z-index: 1
+			>.title
+				font-family: 'Courier New', monospace
+				font-size  : 50
+				font-weight: bold
+				left       : 50%
+				position   : absolute
+				top        : 30
+				transform  : translateX(-50%)
+			>.images
+				height        : 100%
+				left          : 0
+				overflow      : hidden
+				pointer-events: none
+				position      : absolute
+				top           : 0
+				width         : 100%
+				>.logo
+					height   : 200
+					left     : 50%
+					position : absolute
+					top      : 50%
+					transform: translate(-50%,-50%)
+					width    : 200
+				>.reloj1
+					left    : 20
+					position: absolute
+					top     : 50
+					width   : 90
+				>.gusano1
+					left    : -50
+					position: absolute
+					top     : 150
+					width   : 200
+				>.tostadora1
+					left    : 200
+					position: absolute
+					top     : 160
+					width   : 110
+				>.voca1
+					left    : 160
+					position: absolute
+					top     : 250
+					width   : 170
+				>.tostadora2
+					left    : -10
+					position: absolute
+					top     : 350
+					width   : 200
+				>.reloj2
+					left    : 270
+					position: absolute
+					top     : 450
+					width   : 110
+				>.campana1
+					left    : 100
+					position: absolute
+					top     : 500
+					width   : 120
+				>.gusano2
+					left    : -10
+					position: absolute
+					top     : 620
+					width   : 220
+				>.gusano3
+					left    : 230
+					position: absolute
+					top     : 620
+					width   : 220
+				>.tostadora3
+					position: absolute
+					right   : 50
+					top     : 120
+					width   : 100
+				>.gusano4
+					position: absolute
+					right   : 170
+					top     : 180
+					width   : 200
+				>.campana2
+					position: absolute
+					right   : 200
+					top     : 320
+					width   : 120
+				>.voca2
+					position: absolute
+					right   : 0
+					top     : 300
+					width   : 180
+				>.tostadora4
+					position: absolute
+					right   : 150
+					top     : 490
+					width   : 250
+				>.reloj3
+					position: absolute
+					right   : 50
+					top     : 600
+					width   : 90
+
+		&._animate
+			>.menu
+				pointer-events: all
+			>.cont >.images >.logo
+				animation      : spin_logo 3s infinite
+				transform-style: preserve-3d
+
+		&._normal >.btn_play
+			display: none
+
+		@keyframes spin_logo
+			0%  :>transform:translate(-50%,-50%) rotateY(0deg  )
+			50% :>transform:translate(-50%,-50%) rotateY(180deg)
+			100%:>transform:translate(-50%,-50%) rotateY(360deg)
+
+		@media screen and (max-width: 1080px)
+			border       : none
+			border-radius: 0
+			height       : 100%
+			overflow     : hidden
+			top          : 0
+			transform    : translate(-50%, 0)
+			width        : 100%
+			>.scroll >.ycont
+				height: calc(100% - 20px)
+				right : 10
+				top   : 10
+		@media screen and (max-width: 480px)
+			border-radius: 0
+			border       : none
+			>.scroll >.ycont:>right: 0
+	}
+
+	// front-public
+	async Create() {
+		StartLocation();
+		DownloadMenu ();
+
+		this.Events( 'grupo', [{
+			event   : 'click',
+			element : document.body,
+			callback: onClickGlobal,
+		}]);
+
+		const position     = refs.cont.Position();
+		refs.canvas.width  = position.width;
+		refs.canvas.height = position.height;
+		ctx                = refs.canvas.getContext( '2d' );
+		img                = new Image();
+		start_audio        = await LoopAudio( '[[RES]]/recursos/hello-audio-inicio.wav' );
+		bucle_audio        = await LoopAudio( '[[RES]]/recursos/hello-audio-bucle.wav'  );
+		img.src            = '[[RES]]/recursos/telon.png';
+		img.onload         = () => {
+			img_width  = img.width;
+			img_height = img.height;
+
+			RenderCurtain();
+		};
+	}
+
+	// front-private
+	async onClickGlobal(        ) {
+		this.Events( 'grupo'   , false );
+		this.Class ( '_animate', true  );
+		StartFunction();
+	}
+	async onClick      (        ) {
+		if ( refs.icon.Atts( 'icon' )==='fill:play' ) {
+			bucle_audio.Play();
+
+			refs.icon.svg = 'fill:stop';
+		}
+		else {
+			start_audio.Stop();
+			bucle_audio.Stop();
+
+			refs.icon.svg = 'fill:play';
+		}
+	}
+	async onChange     ( _, uri ) {
+		let clase = uri.pathname.toLowerCase().split( '/' )[1] ?? '';
+
+		if ( !start_location      ) return;
+		if ( !clase               ) clase = 'index';
+		if (  props.state===clase ) return;
+
+		if ( clase!=='index' ) {
+			start_audio.Stop();
+			bucle_audio.Stop();
+			this.Class( '_normal', true );
+		}
+
+		props.state = clase;
+
+		this.Class( /_page_/          , false );
+		this.Class( `_page_${ clase }`, true  );
+
+		refs.loader.visible = true;
+
+		await import( `[[host_meme]]/me_${ clase }.js` );
+
+		refs.cont.html      = `<me-${clase}/>`;
+		refs.loader.visible = false;
+	}
+	async onClickAnchor( event  ) {
+		const tar = event.target;
+
+		if ( !(tar instanceof HTMLAnchorElement) ) return;
+
+		event.stopPropagation();
+		event.preventDefault();
+
+		const url = new URL( tar.href );
+
+		this.Trigger( 'mx/router/push', url );
+	}
+}
