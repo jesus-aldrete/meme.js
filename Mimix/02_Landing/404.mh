@@ -1,0 +1,4 @@
+include file './layout.mh'
+		h1>404
+
+static not_available=false

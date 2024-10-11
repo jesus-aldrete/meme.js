@@ -1,0 +1,117 @@
+class {
+	// front-public
+	View () {
+		label*sublabel for={this.id_input}
+		label*label    for={this.id_input}
+	}
+	Style() {/* Temas */
+		@theme-light
+			--back          : $!back_75|#f4f4f4
+			--border        : $!back_35|#a2a2a2
+			--size          : 2px
+			--label-back    : $!back_35|#a2a2a2
+			--label-color   : $!back|#e8e8e8
+			--sublabel-back : $!back_75|#f4f4f4
+			--sublabel-color: $!back_35|#a2a2a2
+
+			--_focus-border            : $!high_10|#332e0d
+			--_focus_sublabel-border   : $!high_10|#332e0d
+			--_disabled-back           : $!soft_95|#eaeaea
+			--_disabled-border         : $!soft_75|#979797
+			--_disabled_label-color    : $!soft_85|#c0c0c0
+			--_disabled_sublabel-back  : $!soft_95|#eaeaea
+			--_disabled_sublabel-border: $!soft_75|#979797
+			--_disabled_input-color    : $!soft_75|#979797
+		@theme-dark
+			--back          : black
+			--border        : $!back_30|#8b8b8b
+			--size          : 1px
+			--sublabel-back : black
+			--sublabel-color: $!back_30|#8b8b8b
+			--label-back    : $!back_30|#8b8b8b
+			--label-color   : $!back_10|#2e2e2e
+
+			--_focus-border            : $!high|#ffe743
+			--_focus_sublabel-border   : $!high|#ffe743
+			--_disabled-back           : $!back_20|#5d5d5d
+			--_disabled-border         : $!back_20|#5d5d5d
+			--_disabled_label-color    : $!back_25|#747474
+			--_disabled_sublabel-back  : $!back_20|#5d5d5d
+			--_disabled_sublabel-border: $!back_20|#5d5d5d
+	}
+	Style() {/* Estilos */
+		align-items     : center
+		background-color: $back
+		border          : $size solid $border
+		border-radius   : 7
+		cursor          : text
+		display         : flex
+		font-size       : 14
+		gap             : 3
+		padding         : 6 5
+		position        : relative
+		transition      : border-color .3s ease-out
+		>.sublabel
+			-webkit-user-select: none
+			background-color   : $sublabel-back
+			border-left        : solid 2 $sublabel-border
+			border-right       : solid 2 $sublabel-border
+			color              : $sublabel-color
+			font-size          : 10
+			opacity            : .001
+			padding            : 0 5
+			pointer-events     : none
+			position           : absolute
+			right              : 10
+			top                : 0
+			transform          : translateY(calc( -50% - 2px ))
+			transition         : opacity .3s ease-out, color .3s ease-out, border-color .3s ease-out
+			user-select        : none
+			z-index            : 1
+		>.label
+			-webkit-user-select: none
+			background-color   : $label-back
+			color              : $label-color
+			font-family        : $!font-family_theme|'Trebuchet MS',Arial
+			font-size          : 16
+			left               : 0
+			line-height        : 1
+			padding            : 3 5
+			pointer-events     : none
+			position           : absolute
+			top                : 50%
+			transform          : translateY(-50%)
+			transition         : opacity .3s ease-out, background-color .3s ease-out
+			user-select        : none
+			z-index            : 1
+	}
+	Style() {/* Estados */
+		&._focus
+			border-color: $_focus-border
+			>.label
+				background-color: $_focus_label-back
+				opacity         : .3
+			>.sublabel
+				border-color: $_focus_sublabel-border
+				color       : $_focus_sublabel-color
+
+		&._fill
+			>.label:>opacity:0
+			>.sublabel:>opacity:1
+
+		&._disabled
+			background-color: $_disabled-back
+			border-color    : $_disabled-border
+			cursor          : not-allowed
+			>.label
+				background-color: $_disabled_label-back
+				color           : $_disabled_label-color
+			>.sublabel
+				background-color: $_disabled_sublabel-back
+				border-color    : $_disabled_sublabel-border
+				color           : $_disabled_sublabel-color
+			>.input
+				color : $_disabled_input-color
+				cursor: not-allowed
+	}
+}

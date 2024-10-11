@@ -1,0 +1,59 @@
+class {
+	View () {
+		! \
+			(mx/auth/ok)   =onOk \
+			(mx/auth/error)=onError \
+
+		.form
+			h1.title>Login
+			mx_input*user caption=Usuario                  (enter)=onEnterUser (input)=onActiveBtn
+			mx_input*pass caption=Contraseña type=password (enter)=onEnterPass (input)=onActiveBtn
+			mx_button*btn enabled=false                    (click)=onLogin>Autenticar
+	}
+	Style() {
+		align-items    : center
+		display        : flex
+		height         : 100%
+		justify-content: center
+		>.form
+			background-color: $!soft_10
+			border-radius   : 15
+			box-shadow      : 0 0 10 black
+			display         : flex
+			flex-direction  : column
+			gap             : 20
+			padding         : 30
+			width           : 300
+			>.title
+				font-size: 25
+				margin   : 0
+			>.mx_button
+				height    : 35
+				margin-top: 20
+	}
+
+	// front-private
+	onEnterUser() {
+		refs.pass.focus();
+	}
+	onEnterPass() {
+		refs.btn.focus();
+	}
+	onActiveBtn() {
+		refs.btn.enabled = !!refs.user.value && !!refs.pass.value;
+	}
+	onLogin    () {
+		this.Trigger( 'mx/loader', true, 'autenticando...' );
+		this.Trigger( 'mx/auth/login', { user:refs.user.value, password:refs.pass.value });
+	}
+	onError    () {
+		this.Trigger( 'mx/loader', false );
+		this.Trigger( 'mx/toast', { error:'El usuario o la contraseña no son correctos' });
+
+		setTimeout( ()=>{ refs.user.select() }, 350 );
+	}
+	onOk       () {
+		this.Trigger( 'mx/router/push', '/' );
+		this.Trigger( 'mx/loader', false );
+	}
+}

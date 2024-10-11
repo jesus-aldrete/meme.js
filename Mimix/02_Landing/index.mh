@@ -1,0 +1,5 @@
+include file './layout.mh'
+		mx_svg icon=favicon
+		h1>[span>Mimix] v[[version_project]]
+
+static not_available=false

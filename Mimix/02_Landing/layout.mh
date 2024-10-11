@@ -1,0 +1,38 @@
+!DOCTYPE html
+html lang="es"
+	head
+		static not_available = true
+		static pre_render    = true
+
+		meta charset="UTF-8"/
+		meta name="viewport" content="width=device-width, initial-scale=1.0"/
+		meta name="description" content="Sistema de diseño de meme.js (mjs.red)"/
+		meta name="keywords" content="sistema de diseño"/
+		meta name="robots" content="index, follow"/
+		meta name="googlebot" content="index, follow"/
+
+		link rel="icon" href="[[RES]]/favicon.svg" type="image/x-icon"/
+
+		title>Mimix v[[version_project]]
+
+		mx_scripts protocol=false core=false
+		mx_theme
+
+		style>{
+			body
+				align-items    : center
+				display        : flex
+				flex-direction : column
+				gap            : 10
+				height         : 100%
+				justify-content: center
+				left           : 0
+				margin         : 0
+				position       : absolute
+				top            : 0
+				width          : 100%
+				>h1:>font-size: 40
+					>span:>color: $high
+		}
+
+	body

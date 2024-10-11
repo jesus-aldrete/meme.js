@@ -1,0 +1,185 @@
+class {
+	// front-private
+	async SelectIcon ( type, emit=true     ) {
+		let ele;
+
+		switch ( type ) {
+			case 'system': ele = refs.rsystem; break;
+			case 'light' : ele = refs.rsun   ; break;
+			case 'dark'  : ele = refs.rmoon  ; break;
+		}
+
+		if ( !ele ) return;
+
+		ele.checked = true;
+
+		const pthis   = ele           .Position();
+		const pselect = refs.select   .Position();
+		const pparent = ele.parentNode.Position();
+
+		refs.select.style.left = `${ pparent.left - ( ( pselect.width - pthis.width ) / 2 ) }px`;
+
+		emit && this.Trigger( 'toggle_theme', type );
+	}
+	async SelectClass( clase, animate=true ) {
+		document.body.Class( /theme/, false );
+
+		let tag;
+
+		if ( animate ) {
+			tag      = document.createElement( 'style' );
+			tag.html = `*{ transition: background .6s ease-out, border-color .6s ease-out, color .3s ease-out, box-shadow .3s ease-out, fill .15s ease-out !important; }`;
+
+			document.head.appendChild( tag );
+
+			await Sleep( 50 );
+		}
+
+		switch ( clase ) {
+			case 'dark' : document.body.Class( 'theme-dark' , true ); break;
+			case 'light': document.body.Class( 'theme-light', true ); break;
+		}
+
+		if ( animate ) {
+			await Sleep( 1500 );
+			tag.Remove();
+		}
+	}
+
+	// front-public
+	View () {
+		! (mx/toggle)=onToggleTheme
+
+		&._not_js (change)=onChange
+
+		.radio
+			input.input*rsystem type=radio name=theme-switch
+			mx_svg.fill.isystem size=16 variant=duotone icon=gear-fine
+
+		.radio
+			input.input*rsun type=radio name=theme-switch
+			mx_svg.fill.isun variant=duotone icon=sun
+
+		.radio
+			input.input*rmoon type=radio name=theme-switch
+			mx_svg.fill.imoon variant=duotone icon=moon
+
+		*select
+	}
+	Style() {/* Tema */
+		@theme-light
+			--back                             : $!back_45
+			--radio_fill-color                 : $!back_10
+			--radio_input_hover_fill-back      : rgba($!_high, .5)
+			--radio_input_focus_fill-shadow    : rgba($!_high, .8)
+			--radio_input_checked_fill-color   : black
+			--radio_input_focus_visible-outline: $!back_10
+			--select-back                      : $!high
+
+			--_not_js_radio_input_checked_fill-back: $!high
+		@theme-dark
+			--back                             : $!soft_40
+			--radio_fill-color                 : $!back
+			--radio_input_focus_visible-outline: $!back
+	}
+	Style() {
+		align-items     : center
+		background-color: $back
+		border-radius   : 1000
+		display         : flex
+		gap             : 10
+		overflow        : hidden
+		padding         : 5
+		position        : relative
+		>.radio
+			height  : 16
+			position: relative
+			width   : 16
+			z-index : 2
+			>.fill
+				border-radius: 1000
+				color        : $radio_fill-color
+				height       : 16
+				transition   : color .3s ease-out, background-color .3s ease-out, box-shadow .3s ease-out
+				width        : 16
+			>.input
+				appearance: none
+				height    : 16
+				left      : 0
+				margin    : 0
+				outline   : none
+				position  : absolute
+				top       : 0
+				width     : 16
+				::hover~.fill
+					background-color: $radio_input_hover_fill-back
+				::focus~.fill
+					box-shadow: 0 0 1 2 $radio_input_focus_fill-shadow
+				::checked~.fill
+					color: $radio_input_checked_fill-color
+				::focus-visible~.fill
+					outline       : solid 1 $radio_input_focus_visible-outline
+					outline-offset: 3
+		>.select
+			background-color: $select-back
+			border-radius   : 1000
+			height          : 22
+			left            : -22
+			position        : absolute
+			top             : 50%
+			transform       : translateY(-50%)
+			transition      : left .3s ease-out !important
+			width           : 22
+			z-index         : 1
+	}
+	Style() {/* Estados */
+		&._not_js
+			>.radio >.input::checked~.fill:>background-color: $_not_js_radio_input_checked_fill-back
+			>.select:>display: none
+	}
+
+	// front-public
+	Create () {
+		this.Class( '_not_js', false );
+
+		props.media = window.matchMedia?.( '(prefers-color-scheme:dark)' );
+
+		props.media?.addEventListener( 'change', onChangeTheme );
+
+		if ( localStorage.theme ) {
+			SelectIcon ( localStorage.theme );
+			SelectClass( localStorage.theme, false );
+		}
+		else {
+			SelectIcon ( 'system' );
+			SelectClass( !props.media || props.media.matches ? 'dark' : 'light', false );
+		}
+	}
+	Destroy() {
+		props.media?.removeEventListener( 'change', onChangeTheme );
+	}
+
+	// front-private
+	onChange     (             ) {
+		switch ( true ) {
+			case refs.rsystem.checked: delete localStorage.theme   ; SelectIcon( 'system' ); SelectClass( window.matchMedia( '(prefers-color-scheme:dark)' ).matches ? 'dark' : 'light' ); break;
+			case refs.rsun   .checked: localStorage.theme = 'light'; SelectIcon( 'light'  ); SelectClass( 'light' ); break;
+			case refs.rmoon  .checked: localStorage.theme = 'dark' ; SelectIcon( 'dark'   ); SelectClass( 'dark'  ); break;
+		}
+	}
+	onToggleTheme( event, type ) {
+		if ( event.target===this ) return;
+
+		SelectIcon( type, false );
+	}
+	onChangeTheme(             ) {
+		if ( localStorage.theme ) {
+			SelectIcon ( localStorage.theme );
+			SelectClass( localStorage.theme );
+		}
+		else {
+			SelectIcon ( 'system' );
+			SelectClass( !props.media || props.media.matches ? 'dark' : 'light' );
+		}
+	}
+}

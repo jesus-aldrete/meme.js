@@ -1,0 +1,188 @@
+const mongo                                                    = require( 'meme:mx_mongo'  );
+const crypto                                                   = require( 'meme:mx_crypto' );
+const { Typeof, EncodeJWE, DecodeJWE, DecodeBase64Url, Sleep } = require( 'meme:lib'       );
+
+class {
+	// back-private
+	async ClearCookie ( socket, pause ) {
+		if ( pause ) await Sleep( 1000 );
+
+		socket.extra_headers.push( 'Set-Cookie: token=0; Max-Age=0; HttpOnly' );
+
+		return false;
+	}
+	async GetUserMongo( config, user  ) {
+		if ( !config ) {
+			console.Error( 'Falta proporcionar una configuracion al componente de "auth"' );
+			return false;
+		}
+
+		config.mongo           ??= {};
+		config.mongo.db_name   ??= 'Users';
+		config.mongo.collection??= 'users';
+
+		let res = await mongo.Connect( config );
+
+		if ( !res ) {
+			console.Error( 'No se pudo conectar a la base "mongo"' );
+			return false;
+		}
+
+		res = await mongo.Getter({ filter:{ user } });
+
+		if ( res.result.length!==1 ) {
+			console.Error( 'No se encontro el usuario en la base mongo' );
+			return false;
+		}
+
+		return res.result[0];
+	}
+
+	async ValidUser( user, pass, value ) {
+		if ( !user || !pass || !value ) {
+			console.Error( 'Faltan parametros de validacion' );
+			return false;
+		}
+
+		value = DecodeJWE( '[[jwe_secret]]', value ) || {};
+
+		return await crypto.Compare({ user, pass, ...value });
+	}
+
+	// back-socket
+	async onGateway() {
+		let token = this.token ?? this.cookie?.token;
+
+		switch ( Typeof( token ) ) {
+			case 'string': token = DecodeJWE( '[[jwe_secret]]', token ); break;
+			case 'object': break;
+			default      : return await ClearCookie( this.socket );
+		}
+
+		let { user, password:pass, db, config, is_valid } = token;
+
+		if ( is_valid===true                                  ) return true;
+		if ( typeof user!=='string' || typeof pass!=='string' ) return await ClearCookie( this.socket, true );
+		if ( !user || !pass                                   ) return await ClearCookie( this.socket, true );
+
+		let   res;
+		const con = this.config.constants[config||'token'];
+
+		switch ( db ) {
+			default: res = await GetUserMongo( con, user ); break;
+		}
+
+		res = await ValidUser( user, pass, res.password );
+
+		if ( res===true ) {
+			this.token_session =
+			EncodeJWE                     ( '[[jwe_secret]]', { user, is_valid:true });
+			this.socket.extra_headers.push( `Set-Cookie: token=${this.token_session}; Max-Age=900000; HttpOnly` );
+		}
+		else await ClearCookie( this.socket );
+
+		return res;
+	}
+
+	// back-tcp
+	async onGateway() {
+		switch ( this.raw_url ) {
+			case '/function/mx_auth/Login' :
+			case '/function/mx_auth/Logout': return true;
+		}
+
+		let token = this.cookies?.token;
+
+		if ( !token ) return;
+
+		token = await DecodeJWE( '[[jwe_secret]]', token );
+
+		if ( !token ) return;
+
+		return !!token.is_valid;
+	}
+
+	// back-tcp
+	async Valid (      ) {
+		return true;
+	}
+	async Login ( data ) {
+		let   token    = DecodeBase64Url( data );
+		const response = ( token ) => ({
+			_cookies: { token:token || 0, maxAge:token?900000:0, httpOnly:true, path:'/' },
+			_body   : { value:!!token },
+			_code   : token?200:401,
+		});
+
+		try   { token = JSON.parse( token ) }
+		catch { return response() };
+
+		let   res;
+		const { user, password, db, config:conf } = token;
+		const con = this.config.constants[conf||'token'];
+
+		switch ( db ) {
+			default: res = await GetUserMongo( con, user );
+		}
+
+		if ( !res ) { await Sleep( 1000 ); return }
+
+		res = await ValidUser( user, password, res.password );
+
+		return response( res===true ? EncodeJWE( '[[jwe_secret]]', { user, is_valid:true }) : null );
+	}
+	async Logout(      ) {
+		return {
+			_cookies: { token:0, maxAge:0, httpOnly:true, path:'/' },
+		};
+	}
+
+	// front-private
+	EncodeBase64Url( data ) {
+		data = JSON.stringify( data );
+		data = btoa( data )
+		.replace ( /=/g , ''  )
+		.replace ( /\+/g, '-' )
+		.replace ( /\//g, '_' )
+
+		return data.slice( 2 ) + data.slice( 0, 2 )
+	}
+
+	// front-public
+	View () {
+		! \
+			(mx/auth/valid) =onValid \
+			(mx/auth/login) =onLogin \
+			(mx/auth/logout)=onLogout
+	}
+	Style() {
+		display: none
+	}
+
+	// front-private
+	async onValid (           ) {
+		switch ( props.type ) {
+			case 'socket':
+				if ( window._meme_protocol.IsConnect() ) return true;
+			return await window._meme_protocol.Connect();
+
+			default: return await Valid();
+		}
+	}
+	async onLogin ( _, params ) {
+		const { user, password } = params;
+		let   result;
+
+		switch ( props.type ) {
+			case 'socket': result = await window._meme_protocol.Connect({ user, password, db:props.db, config:props.config }); break;
+			default      : result = await Login( EncodeBase64Url({ user, password, db:props.db, config:props.config }) ); break;
+		}
+
+		if ( result===true ) this.Trigger( 'mx/auth/ok'    );
+		else                 this.Trigger( 'mx/auth/error' );
+	}
+	async onLogout(           ) {
+		await Logout();
+		window._meme_protocol.Disconnect();
+	}
+}
