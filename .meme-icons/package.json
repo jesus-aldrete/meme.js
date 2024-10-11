@@ -1,0 +1,36 @@
+{
+	"name": "meme-icons",
+	"displayName": "meme.js Icons",
+	"description": "Meme Icons for Visual Studio Code",
+	"version": "3.11.10",
+	"publisher": "memejs",
+	"license": "MIT",
+	"icon": "01_Resources/brand/logo.png",
+	"scripts": {
+		"build": "vsce package",
+		"deploy": "vsce publish"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jesus-aldrete/meme.js"
+	},
+	"engines": {
+		"vscode": "^1.60.0"
+	},
+	"categories": [
+		"Themes"
+	],
+	"galleryBanner": {
+		"color": "#1a1c26",
+		"theme": "dark"
+	},
+	"contributes": {
+		"iconThemes": [
+			{
+				"id": "meme-icons",
+				"label": "meme.js Icons",
+				"path": "./02_Icons/meme-icons.json"
+			}
+		]
+	}
+}
