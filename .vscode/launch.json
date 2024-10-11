@@ -1,0 +1,103 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{"name":"meme-icons", "presentation":{ "group":"01_group_vscode_icons", "order":1 },
+			"request"          : "launch",
+			"runtimeExecutable": "${workspaceRoot}/.meme-icons",
+			"type"             : "extensionHost",
+			"args"             : [
+				"--extensionDevelopmentPath=${workspaceRoot}/.meme-icons"
+			],
+		},
+
+		{"name":"Syntaxis HTML", "presentation":{ "group":"02_group_vscode_langs", "order":1 },
+			"preLaunchTask"    : "build_meme_htm",
+			"request"          : "launch",
+			"runtimeExecutable": "${workspaceRoot}/.meme-lang",
+			"type"             : "extensionHost",
+			"args"             : [
+				"--extensionDevelopmentPath=${workspaceRoot}/.meme-lang"
+			],
+		},
+		{"name":"Syntaxis CSS", "presentation": { "group":"02_group_vscode_langs", "order":2 },
+			"preLaunchTask"    : "build_meme_css",
+			"request"          : "launch",
+			"type"             : "extensionHost",
+			"runtimeExecutable": "${workspaceRoot}/.meme-lang",
+			"args"             : [
+				"--extensionDevelopmentPath=${workspaceRoot}/.meme-lang"
+			],
+		},
+		{"name":"Syntaxis JS", "presentation":{ "group":"02_group_vscode_langs", "order":3 },
+			"preLaunchTask"    : "build_meme_js",
+			"request"          : "launch",
+			"type"             : "extensionHost",
+			"runtimeExecutable": "${workspaceRoot}/.meme-lang",
+			"args"             : [
+				"--extensionDevelopmentPath=${workspaceRoot}/.meme-lang"
+			],
+		},
+		{"name":"Syntaxis ALL", "presentation":{ "group":"02_group_vscode_langs", "order":4 },
+			"preLaunchTask"    : "build_meme_all",
+			"request"          : "launch",
+			"type"             : "extensionHost",
+			"runtimeExecutable": "${workspaceRoot}/.meme-lang",
+			"args"             : [
+				"--extensionDevelopmentPath=${workspaceRoot}/.meme-lang"
+			],
+		},
+
+		{"name":"Intellisense Client", "presentation":{ "group":"03_group_vscode_debug", "order":1 },
+			"outFiles"         : [ "${workspaceRoot}/.meme-lang/04_Features/client.js" ],
+			"request"          : "launch",
+			"type"             : "extensionHost",
+			"runtimeExecutable": "${workspaceRoot}/.meme-lang",
+			"args"             : [
+				"--extensionDevelopmentPath=${workspaceRoot}/.meme-lang"
+			],
+		},
+		{"name":"Intellisense Server", "presentation":{ "group":"03_group_vscode_debug", "order":2 },
+			"outFiles": [ "${workspaceRoot}/.meme-lang/04_Features/server.js" ],
+			"port"    : 4101,
+			"request" : "attach",
+			"restart" : true,
+			"type"    : "node",
+		},
+
+		{"name":"meme Driver", "presentation":{ "group":"04_group_meme_sdk", "order":4 },
+			"console"               : "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"request"               : "launch",
+			"restart"               : true,
+			"type"                  : "node",
+			"cwd"                   : "${workspaceFolder}/.meme-sdk/01_Resources/pruebas/project",
+			"runtimeExecutable"     : "${workspaceFolder}/.meme-sdk/03_Execs/watcher.js",
+			"args"                  : [
+				"-x", "${workspaceFolder}/.meme-sdk/03_Execs/driver.js -driver_port=49123",
+			],
+		},
+		{"name":"Test Project", "presentation":{ "group":"04_group_meme_sdk", "order":5 },
+			"console"               : "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"request"               : "launch",
+			"restart"               : true,
+			"type"                  : "node",
+			"cwd"                   : "${workspaceFolder}/.meme-sdk/01_Resources/pruebas/project",
+			"runtimeExecutable"     : "${workspaceFolder}/.meme-sdk/03_Execs/watcher.js",
+			"args"                  : [
+				"-x", "${workspaceFolder}/.meme-sdk/03_Execs/cli.js -s -d ${workspaceFolder}/.meme-sdk/01_Resources/pruebas/project -no-demon",
+				"-w", "${workspaceFolder}/.meme-sdk/01_Resources/pruebas/project",
+				"-i", "[\"resources|build\", \"gmi\"]",
+				"-f", "[\"\\\\.(js|json)$\", \"gmi\"]"
+			],
+		},
+	],
+	"compounds": [
+		{"name":"Intellisense Client + Server", "presentation":{ "group":"03_group_vscode_debug", "order":3 },
+			"configurations": [
+				"Intellisense Client",
+				"Intellisense Server",
+			],
+		},
+	]
+}

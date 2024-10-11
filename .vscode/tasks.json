@@ -1,0 +1,83 @@
+{
+	"version": "2.0.0",
+	"command": "",
+	"args": [],
+	"tasks": [
+		{"label": "build_meme_js",
+			"command": "${workspaceRoot}/.meme-lang/node_modules/.bin/js-yaml",
+			"type": "shell",
+			"args": [
+				"${workspaceRoot}/.meme-lang/02_Sintaxis/meme-js.tmLanguage.yaml",
+				">",
+				"${workspaceRoot}/.meme-lang/02_Sintaxis/meme-js.tmLanguage.json"
+			],
+			"options": {
+				"cwd": "${workspaceRoot}"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{"label": "build_meme_css",
+			"command": "${workspaceRoot}/.meme-lang/node_modules/.bin/js-yaml",
+			"type": "shell",
+			"args": [
+				"${workspaceRoot}/.meme-lang/02_Sintaxis/meme-css.tmLanguage.yaml",
+				">",
+				"${workspaceRoot}/.meme-lang/02_Sintaxis/meme-css.tmLanguage.json"
+			],
+			"options": {
+				"cwd": "${workspaceRoot}"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{"label": "build_meme_htm",
+			"command": "${workspaceRoot}/.meme-lang/node_modules/.bin/js-yaml",
+			"type": "shell",
+			"args": [
+				"${workspaceRoot}/.meme-lang/02_Sintaxis/meme-html.tmLanguage.yaml",
+				">",
+				"${workspaceRoot}/.meme-lang/02_Sintaxis/meme-html.tmLanguage.json"
+			],
+			"options": {
+				"cwd": "${workspaceRoot}"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{"label": "build_meme_all",
+			"dependsOn": [
+				"build_meme_js",
+				"build_meme_css",
+				"build_meme_htm",
+			]
+		},
+	]
+}
