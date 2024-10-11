@@ -1,0 +1,531 @@
+name      : meme-css
+scopeName : source.mc
+version   : '3.0.0'
+autor     : Jesus E. Aldrete Hernandez
+patterns  :
+  - include: '#comments'
+  - include: '#scripts'
+  - include: '#strings'
+  - include: '#variables'
+
+  - include: '#define'
+  - include: '#include'
+
+  - include: '#property'
+  - include: '#tag'
+  - include: '#keyframes'
+  - include: '#media'
+  - include: '#supports'
+  - include: '#font-face'
+  - include: '#theme'
+repository:
+  # COMENTARIOS
+  comments:
+    patterns:
+      - include: '#comments-separator'
+      - include: '#comments-line'
+      - include: '#comments-block'
+  comments-separator:
+    begin: '/\*/'
+    beginCaptures:
+      0:
+        name: punctuation.separator.key-value.mapping.yaml
+    end: '/?\*/'
+    endCaptures:
+      0:
+        name: punctuation.separator.key-value.mapping.yaml
+    patterns:
+      - match: '[A-z]'
+        name: string
+      - match: '[0-9]'
+        name: constant.numeric.decimal.js
+      - match: '[^A-z0-9]'
+        name: comment.block.documentation.js
+  comments-line:
+    begin: \/\/
+    end  : (?=\n)
+    name : comment.block.css.mh
+  comments-block:
+    begin: \/\*
+    end  : \*\/
+    name : comment.block.css.mh
+
+  # SCRIPTS
+  scripts:
+    patterns:
+      - begin: (\{)(request)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+      - begin: (\{)(build)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+      - begin: (\{)(write)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+      - begin: (\{)(mc)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mc
+      - begin: (\{)(mh)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mh
+      - begin: (\{)(\*?)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+  strings:
+    patterns:
+      - include: '#scripts'
+      - include: '#strings-single'
+      - include: '#strings-double'
+  strings-single:
+    begin: "'"
+    end: (\')|((?:[^\\\n|\{])$)
+    beginCaptures:
+      0:
+        name: punctuation.definition.string.begin.mh
+    endCaptures:
+      1:
+        name: punctuation.definition.string.end.mh
+      2:
+        name: invalid.illegal.newline.mh
+    name: string.quoted.single.mh
+    patterns:
+      - include: '#variables'
+      - include: '#scripts'
+      - include: '#strings-escape'
+  strings-double:
+    begin: '"'
+    end: (\")|((?:[^\\\n|\{])$)
+    beginCaptures:
+      0:
+        name: punctuation.definition.string.begin.js
+    endCaptures:
+      1:
+        name: punctuation.definition.string.end.mh
+      2:
+        name: invalid.illegal.newline.mh
+    name: string.quoted.double.js
+    patterns:
+      - include: '#variables'
+      - include: '#scripts'
+      - include: '#strings-escape'
+  strings-escape:
+    match: \\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\{[0-9A-Fa-f]+\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)
+    name: constant.character.escape.js
+
+  # VARIABLES
+  variables:
+    patterns:
+      - match: \[\[([[:word:]]|\_|\-)+\]\]
+        name: keyword.control.directive.variable
+
+  # DEFINE
+  define:
+    patterns:
+      - begin: ^\s*(define)
+        captures:
+          1:
+            name: keyword.control.define.js
+        end: (?=\n|\;|\:\>|\:\<)
+        patterns:
+          - include: '#strings-escape'
+
+          - begin: \b(as)\b
+            captures:
+              0:
+                name: keyword.control.as.js
+            end: (?=\n|\;|\:\>|\:\<)
+            patterns:
+              - include: '#strings'
+
+          - begin: (?=[A-z])
+            end: \s
+            patterns:
+              - match: ([A-z0-9]|-|_)
+                name: variable.other.readwrite.alias.js
+
+              - begin: \(
+                end: \)
+                captures:
+                  0:
+                    name: punctuation.definition.block.js
+                patterns:
+                  - match: ([A-z])
+                    name: variable.parameter.js
+
+                  - match: \,
+                    name: punctuation.separator.parameter.js
+
+  # INCLUDE
+  include:
+    patterns:
+      - begin: (include|exclude)(\t|\ )+((url)|(file)|(class))(\t|\ )+('|\")
+        beginCaptures:
+          1:
+            name: keyword.control.include.js
+          4:
+            name: keyword.control.from.url.js
+          5:
+            name: keyword.control.from.file.js
+          6:
+            name: keyword.control.from.class.js
+          8:
+            name: punctuation.definition.string.end
+        end: (\'|\")|((?:[^\\\n])$)
+        endCaptures:
+          1:
+            name: punctuation.definition.string.end
+          2:
+            name: invalid.illegal.newline
+        name: string.quoted
+
+  # PROPERTY
+  property:
+    patterns:
+      - begin: \s*(([A-z]|\-|\!)([[:word:]]|\-|\!)+)\s*(\:)\s*(?=[[:word:]]|\(|\{|\$|\-|\_|\.|\#|\'|\"|\/|\[)
+        end: (\n|(?=\}|\:\>|\;|\:\<|\)))
+        beginCaptures:
+          1:
+            name: support.type.property-name.css
+          4:
+            name: punctuation.separator.key-value.css
+        patterns:
+          - include: '#comments'
+          - include: '#strings'
+          - include: '#scripts'
+          - include: '#variables'
+          - include: '#include'
+          - include: '#property-value'
+      - begin: (\:\>|\:\<|\;)\s*(([A-z]|\-|\!)([[:word:]]|\-|\!)+)\s*(\:)\s*(?=[[:word:]]|\(|\{|\$|\-|\_|\.|\#|\'|\"|\/|\[)
+        end: (\n|(?=\}|\:\>|\;|\:\<|\)))
+        beginCaptures:
+          1:
+            name: punctuation.terminator.statement.js
+          2:
+            name: support.type.property-name.css
+          5:
+            name: punctuation.separator.key-value.css
+        patterns:
+          - include: '#comments'
+          - include: '#strings'
+          - include: '#scripts'
+          - include: '#variables'
+          - include: '#include'
+          - include: '#property-value'
+  property-value:
+    patterns:
+      - match: \s*(\.|(\d+))(s|ms|cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|\*vw|vh|\*vh|vmin|vmax|\%)?
+        captures:
+          0:
+            name: constant.numeric.css
+          3:
+            name: keyword.other.unit.css
+
+      - begin: ((([[:word:]]|\-)+)(\())
+        beginCaptures:
+          2:
+            name: support.function.calc.css
+          4:
+            name: punctuation.section.function.begin.bracket.round.css
+        end: \)|(?=\})
+        endCaptures:
+          0:
+            name: punctuation.section.function.end.bracket.round.css
+        patterns:
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#strings'
+          - include: '#comments'
+          - include: '#property-value'
+
+          - match: \+|\-|\/
+            name: keyword.operator.arithmetic.css
+
+      - match: (\$!?)([[:word:]]|\-)+
+        name: variable.argument.css
+
+      - match: \#([[:word:]]|\-)+
+        name: constant.other.color.css
+
+      - match: ([[:word:]]|\-)
+        name: support.constant.property-value.css
+
+      - match: \!important
+        name: keyword.other.important.css
+
+  tag:
+    patterns:
+      - match: \;|\:\>|\:\<
+        name: punctuation.terminator.statement.js
+      - match: \&
+        name: entity.name.tag.reference.scss
+      - match: \>|\!
+        name: keyword.operator.combinator.css
+      - match: \+
+        name: keyword.operator.combinator.css
+      - match: \,
+        name: punctuation.separator.list.comma.css
+      - match: \*
+        name: entity.name.tag.wildcard.css
+      - begin: \.
+        beginCaptures:
+          0:
+            name: punctuation.definition.entity.css
+        end: (?=\/([^/*]))|(?=[^[:word:]\[\-\{\/])
+        name: entity.other.attribute-name.class.css
+        patterns:
+          - include: '#comments'
+          - include: '#scripts'
+          - include: '#variables'
+          - include: '#tag-params'
+      - begin: \#
+        beginCaptures:
+          0:
+            name: punctuation.definition.entity.css
+        end: (?=\/([^/*]))|(?=[^[:word:]\[\-\{\/])
+        name: entity.other.attribute-name.id.css
+        patterns:
+          - include: '#comments'
+          - include: '#scripts'
+          - include: '#variables'
+          - include: '#tag-params'
+      - begin: '(?=[[:word:]]|\_|\-)'
+        beginCaptures:
+          0:
+            name: entity.other.attribute-name.class.css punctuation.definition.entity.css
+        end: (?=\/([^/*]))|(?=[^[:word:]\[\-\{\/\%])
+        name: entity.name.tag.css
+        patterns:
+          - include: '#comments'
+          - include: '#scripts'
+          - include: '#variables'
+          - include: '#tag-params'
+      - begin: (\:\:)(?=[^<>])
+        beginCaptures:
+          0:
+            name: punctuation.definition.entity.css
+        end: (?=\/([^/*]))|(?=[^[:word:]\[\-\{\/])
+        name: entity.other.attribute-name.pseudo-class.css
+        patterns:
+          - include: '#comments'
+          - include: '#scripts'
+          - include: '#variables'
+          - include: '#tag-params'
+  tag-params:
+    patterns:
+      - begin: \[
+        beginCaptures:
+          0:
+            name: punctuation.definition.directive.ec
+        end: \]
+        endCaptures:
+          0:
+            name: punctuation.definition.directive.ec
+        patterns:
+          - begin: ([A-z]|\_|\-)
+            end: (?=\s|\]|\=)
+            name: entity.other.attribute-name.css
+            patterns:
+              - include: '#variables'
+              - include: '#scripts'
+              - include: '#comments'
+
+          - begin: (?=\=)
+            end: (?=\s|\])
+            patterns:
+              - match: (\=)\s*(\d*\.\d+)(?=\s|\])
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.numeric.css
+
+              - match: (\=)\s*(\d+)(?=\s|\])
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.numeric.css
+
+              - match: (\=)\s*(true|false)(?=\s|\])
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.language.boolean.ec
+
+              - match: (\=)\s*(null)(?=\s|\])
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.language.null.ec
+
+              - match: (\=)\s*(undefined)(?=\s|\])
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.language.undefinde.ec
+
+              - begin: \=
+                beginCaptures:
+                  0:
+                    name: keyword.operator.pattern.css
+                end: (?=\s|\])
+                name: string
+                patterns:
+                  - include: '#scripts'
+                  - include: '#strings-escape'
+                  - include: '#strings'
+                  - include: '#variables'
+                  - include: '#comments'
+  keyframes:
+    patterns:
+      - begin: (\@)(keyframes)\b
+        end: \n|(?=\/\/|\;|\:\<|\:\>)
+        beginCaptures:
+          1:
+            name: punctuation.definition.keyword.css
+          0:
+            name: keyword.control.at-rule.keyframes.css
+        patterns:
+          - match: ([[:word:]]+)
+            name: variable.parameter.keyframe-list.css
+
+          - begin: \(
+            end: \)
+            captures:
+              0:
+                name: punctuation.section.function.bracket.round.css
+            patterns:
+              - include: '#property-value'
+  media:
+    patterns:
+      - begin: (\@)(media)\b
+        end: \n|(?=\/\/|\;|\:\<|\:\>|\})
+        beginCaptures:
+          1:
+            name: punctuation.definition.keyword.css
+          0:
+            name: keyword.control.at-rule.keyframes.css
+        patterns:
+          - include: '#media-keys'
+
+          - match: \,
+            name: punctuation.separator.list.comma.cs
+
+          - match: \b(and|only)\b
+            name: keyword.operator.logical.and.media.css
+
+          - match: \b(print|screen)\b
+            name: support.constant.media.css
+  media-keys:
+    patterns:
+      - match: \b(and)\b
+        name: keyword.operator.logical.feature.and.css
+
+      - match: \b(or)\b
+        name: keyword.operator.logical.feature.or.css
+
+      - begin: \(
+        end: \)
+        captures:
+          0:
+            name: punctuation.section.function.bracket.round.css
+        patterns:
+          - include: '#property'
+
+          - begin: (?=\()
+            end: (?=\))
+            captures:
+              0:
+                name: punctuation.section.function.bracket.round.css
+            patterns:
+              - include: '#media-keys'
+  supports:
+    patterns:
+      - begin: (\@)(supports)\b
+        end: \n|(?=\/\/|\;|\:\<|\:\>|\})
+        beginCaptures:
+          1:
+            name: punctuation.definition.keyword.css
+          0:
+            name: keyword.control.at-rule.keyframes.css
+        patterns:
+          - include: '#media-keys'
+  font-face:
+    patterns:
+      - match: (\@)(font-face)\b
+        captures:
+          1:
+            name: punctuation.definition.keyword.css
+          0:
+            name: keyword.control.at-rule.keyframes.css
+  theme:
+    patterns:
+      - match: (\@)(theme\-dark)\b
+        captures:
+          1:
+            name: punctuation.definition.keyword.css
+          0:
+            name: keyword.control.at-rule.keyframes.css
+      - match: (\@)(theme\-light)\b
+        captures:
+          1:
+            name: punctuation.definition.keyword.css
+          0:
+            name: keyword.control.at-rule.keyframes.css

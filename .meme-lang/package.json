@@ -1,0 +1,81 @@
+{
+	"name": "meme-lang",
+	"displayName": "meme.js Languages",
+	"description": "Paquete de lenguajes del sdk meme.js",
+	"version": "5.2.1",
+	"publisher": "memejs",
+	"icon": "01_Resources/brand/logo.png",
+	"scripts": {
+		"build": "vsce package",
+		"deploy": "vsce publish"
+	},
+	"galleryBanner": {
+		"color": "#1a1c26",
+		"theme": "dark"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jesus-aldrete/meme.js"
+	},
+	"main": "./04_Features/client.js",
+	"activationEvents": [
+		"onLanguage:meme-js",
+		"onLanguage:meme-css",
+		"onLanguage:meme-html"
+	],
+	"engines": {
+		"vscode": "^1.60.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"contributes": {
+		"languages": [
+			{ "id":"json"      , "filenames":["meme.cache"            ], "extensions":[".meme.cache"], "icon": { "light": "./01_Resources/icons/meme.cache.svg", "dark": "./01_Resources/icons/meme.cache.svg" } },
+			{ "id":"javascript", "filenames":["meme.conf"             ], "extensions":[".meme.conf" ], "icon": { "light": "./01_Resources/icons/meme.conf.svg" , "dark": "./01_Resources/icons/meme.conf.svg"  } },
+			{ "id":"meme-js"   , "aliases"  :["meme-JS"  , "meme-js"  ], "extensions":[".mj"        ], "icon": { "light": "./01_Resources/icons/meme-js.svg"   , "dark": "./01_Resources/icons/meme-js.svg"    }, "configuration":"./02_Sintaxis/language-configuration.json" },
+			{ "id":"meme-css"  , "aliases"  :["meme-CSS" , "meme-css" ], "extensions":[".mc"        ], "icon": { "light": "./01_Resources/icons/meme-css.svg"  , "dark": "./01_Resources/icons/meme-css.svg"   }, "configuration":"./02_Sintaxis/language-configuration.json" },
+			{ "id":"meme-html" , "aliases"  :["meme-HTML", "meme-html"], "extensions":[".mh"        ], "icon": { "light": "./01_Resources/icons/meme-html.svg" , "dark": "./01_Resources/icons/meme-html.svg"  }, "configuration":"./02_Sintaxis/language-configuration.json" }
+		],
+		"grammars": [
+			{ "language":"meme-js"  , "scopeName":"source.mj", "path":"./02_Sintaxis/meme-js.tmLanguage.json"  , "embeddedLanguages":{"meta.embedded.block.mh":"meme-html", "meta.embedded.block.mc":"meme-css"  } },
+			{ "language":"meme-css" , "scopeName":"source.mc", "path":"./02_Sintaxis/meme-css.tmLanguage.json" , "embeddedLanguages":{"meta.embedded.block.mj":"meme-js"  , "meta.embedded.block.mh":"meme-html" } },
+			{ "language":"meme-html", "scopeName":"source.mh", "path":"./02_Sintaxis/meme-html.tmLanguage.json", "embeddedLanguages":{"meta.embedded.block.mj":"meme-js"  , "meta.embedded.block.mc":"meme-css"  } }
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Example configuration",
+			"properties": {
+				"languageServerExample.maxNumberOfProblems": {
+					"scope": "resource",
+					"type": "number",
+					"default": 100,
+					"description": "Controls the maximum number of problems produced by the server."
+				},
+				"languageServerExample.trace.server": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the language server."
+				}
+			}
+		},
+		"breakpoints": [
+			{ "language":"meme-js" }
+		]
+	},
+	"dependencies": {
+		"vscode-languageclient": "7.0.0",
+		"vscode-languageserver": "7.0.0",
+		"vscode-languageserver-textdocument": "1.0.1"
+	},
+	"devDependencies": {
+		"@types/vscode": "1.60.0",
+		"js-yaml": "3.14.0"
+	}
+}

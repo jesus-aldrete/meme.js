@@ -1,0 +1,502 @@
+name      : meme-html
+scopeName : source.mh
+version   : '3.0.0'
+autor     : Jesus E. Aldrete Hernandez
+patterns  :
+  - include: '#comments'
+  - include: '#scripts'
+  - include: '#strings'
+  - include: '#variables'
+
+  - include: '#define'
+  - include: '#include'
+
+  - include: '#DOCTYPE'
+  - include: '#tag-style'
+  - include: '#tag'
+  - include: '#tag-id'
+  - include: '#tag-class'
+  - include: '#tag-pointer'
+repository:
+  # DEFINE
+  define:
+    patterns:
+      - begin: ^\s*(define)
+        captures:
+          1:
+            name: keyword.control.define.js
+        end: (?=\n|\;|\:\>|\:\<)
+        patterns:
+          - include: '#strings-escape'
+
+          - begin: \b(as)\b
+            captures:
+              0:
+                name: keyword.control.as.js
+            end: (?=\n|\;|\:\>|\:\<)
+            patterns:
+              - include: '#strings'
+
+          - begin: (?=[A-z])
+            end: \s
+            patterns:
+              - match: ([A-z0-9]|-|_)
+                name: variable.other.readwrite.alias.js
+
+              - begin: \(
+                end: \)
+                captures:
+                  0:
+                    name: punctuation.definition.block.js
+                patterns:
+                  - match: ([A-z])
+                    name: variable.parameter.js
+
+                  - match: \,
+                    name: punctuation.separator.parameter.js
+
+  # INCLUDE
+  include:
+    patterns:
+      - begin: (include|exclude)(\t|\ )+((url)|(file))(\t|\ )+('|\")
+        beginCaptures:
+          1:
+            name: keyword.control.include.js
+          4:
+            name: keyword.control.from.url.js
+          5:
+            name: keyword.control.from.file.js
+          7:
+            name: punctuation.definition.string.end
+        end: (\'|\")|((?:[^\\\n])$)
+        endCaptures:
+          1:
+            name: punctuation.definition.string.end
+          2:
+            name: invalid.illegal.newline
+        name: string.quoted
+
+  # VARIABLES
+  variables:
+    patterns:
+      - match: \[\[([[:word:]]|\_|\-)+\]\]
+        name: keyword.control.directive.variable
+
+  # COMENTARIOS
+  comments:
+    patterns:
+      - include: '#comments-line'
+      - include: '#comments-block'
+  comments-line:
+    begin: \/\/
+    end  : (?=\n)
+    name : comment.block.css.mh
+  comments-block:
+    begin: \/\*
+    end  : \*\/
+    name : comment.block.css.mh
+
+  # SCRIPTS
+  scripts:
+    patterns:
+      - begin: (\{)(request)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+      - begin: (\{)(build)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+      - begin: (\{)(write)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+      - begin: (\{)(mc)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mc
+      - begin: (\{)(mh)(?=\'|\s+)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mh
+      - begin: (\{)(\*?)
+        beginCaptures:
+          1:
+            name: punctuation.definition.directive.cpp
+          2:
+            name: keyword.control.directive.cpp
+        end: \}
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: source.mj
+
+  # CADENAS
+  strings:
+    patterns:
+      - include: '#scripts'
+      - include: '#strings-single'
+      - include: '#strings-double'
+  strings-single:
+    begin: "'"
+    end: (\')|((?:[^\\\n])$)
+    beginCaptures:
+      0:
+        name: punctuation.definition.string.begin.mh
+    endCaptures:
+      1:
+        name: punctuation.definition.string.end.mh
+      2:
+        name: invalid.illegal.newline.mh
+    name: string.quoted.single.mh
+    patterns:
+      - include: '#variables'
+      - include: '#scripts'
+      - include: '#strings-escape'
+  strings-double:
+    begin: '"'
+    end: (\")|((?:[^\\\n])$)
+    beginCaptures:
+      0:
+        name: punctuation.definition.string.begin.js
+    endCaptures:
+      1:
+        name: punctuation.definition.string.end.mh
+      2:
+        name: invalid.illegal.newline.mh
+    name: string.quoted.double.js
+    patterns:
+      - include: '#variables'
+      - include: '#scripts'
+      - include: '#strings-escape'
+  strings-escape:
+    match: \\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\{[0-9A-Fa-f]+\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)
+    name: constant.character.escape.js
+
+  # mHTML
+  DOCTYPE:
+    patterns:
+      - match: (\!)(DOCTYPE)\s+(html)
+        captures:
+          1:
+            name: punctuation.definition.tag.begin.html
+          2:
+            name: entity.name.tag.html
+          3:
+            name: entity.other.attribute-name.html
+  tag:
+    patterns:
+      - match: (\/|\;)
+        name: punctuation.definition.tag.end.html
+
+      - begin: \!
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.begin.html
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-body'
+          - include: '#tag-params'
+
+      - begin: \&
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.begin.html
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-body'
+          - include: '#tag-params'
+
+      - begin: (?=[[:word:]]|\-)
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-body'
+          - include: '#tag-params'
+
+          - match: ([[:word:]]|\-)
+            name: entity.name.tag.html
+  tag-id:
+    patterns:
+      - begin: \#
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.begin.html
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-body'
+          - include: '#tag-params'
+
+          - match: ([[:word:]]|\-)
+            name: entity.name.tag.html
+  tag-class:
+    patterns:
+      - begin: \.
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.begin.html
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-body'
+          - include: '#tag-params'
+
+          - match: ([[:word:]]|\-)
+            name: entity.name.tag.html
+  tag-pointer:
+    patterns:
+      - begin: \*
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.begin.html
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-body'
+          - include: '#tag-params'
+
+          - match: ([[:word:]]|\-)
+            name: entity.name.tag.html
+  tag-params:
+    patterns:
+      - begin: (\t|\ )
+        end: (?=\s|\>|\/[^\*]|\;|\]|\})
+        patterns:
+          - begin: \(
+            end: \)
+            captures:
+              0:
+                name: punctuation.definition.directive.cpp
+            patterns:
+              - begin: (\:)
+                beginCaptures:
+                  0:
+                    name: punctuation.separator.parameter
+                end: (?=\))
+                patterns:
+                  - match: ([[:word:]]|\-|\/)
+                    name: variable.parameter
+                  - match: \,
+                    name: punctuation.separator.parameter
+              - match: ([[:word:]]|\-|\/)
+                name: entity.other.attribute-name.css
+          - begin: ([[:word:]]|\-|(?=\\\n))
+            beginCaptures:
+              0:
+                name: entity.other.attribute-name.css
+            end: (?=\=|\s|\>|\/[^\*]|\;|\]|\})
+            patterns:
+              - match: \\\n
+                name: constant.character.escape.js
+
+              - include: '#variables'
+              - include: '#scripts'
+              - include: '#comments'
+              - include: '#strings-escape'
+
+              - match: ([[:word:]]|\-)
+                name: entity.other.attribute-name.css
+
+          - begin: (?=\=)
+            end: (?=\s|\>|\/[^\*]|\;|\]|\}|\\\n)
+            patterns:
+              - match: (\=)\s*(\d+)(?=\s|\>|\/[^\*]|\;|\]|\})
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.numeric.css
+
+              - match: (\=)\s*(\d*\.\d+)(?=\s|\>|\/[^\*]|\;|\]|\})
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.numeric.css
+
+              - match: (\=)\s*(\d+)(?=\s|\>|\/[^\*]|\;|\]|\})
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.numeric.css
+
+              - match: (\=)\s*(true|false)(?=\s|\>|\/[^\*]|\;|\]|\})
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.language.boolean.ec
+
+              - match: (\=)\s*(null)(?=\s|\>|\/[^\*]|\;|\]|\})
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.language.null.ec
+
+              - match: (\=)\s*(undefined)(?=\s|\>|\/[^\*]|\;|\]|\})
+                captures:
+                  1:
+                    name: keyword.operator.pattern.css
+                  2:
+                    name: constant.language.undefinde.ec
+
+              - begin: (\=)\s*
+                beginCaptures:
+                  0:
+                    name: keyword.operator.pattern.css
+                end: (?=\s|\>|\/[^\*]|\;|\]|\}|\\\n)
+                name: string
+                patterns:
+                  - include: '#strings-escape'
+                  - include: '#strings'
+                  - include: '#variables'
+                  - include: '#scripts'
+                  - include: '#comments'
+  tag-body:
+    patterns:
+      - begin: \>
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.end.html
+        end: (?=\n|\}|\;|\])
+        name: text
+        patterns:
+          - match: \\\n
+            name: constant.character.escape.js
+
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#strings-escape'
+          - include: '#tag-sub'
+          - include: '#tag-body-multiline'
+          - include: '#include'
+  tag-body-multiline:
+    begin: \(
+    beginCaptures:
+      0:
+        name: punctuation.definition.directive.cpp
+    end: \)
+    endCaptures:
+      0:
+        name: punctuation.definition.directive.cpp
+    patterns:
+      - match: \\\n
+        name: constant.character.escape.js
+
+      - include: '#comments'
+      - include: '#variables'
+      - include: '#scripts'
+      - include: '#strings-escape'
+      - include: '#tag-sub'
+      - include: '#include'
+  tag-sub:
+    patterns:
+      - begin: \[
+        end: \]
+        captures:
+          0:
+            name: punctuation.definition.directive.cpp
+        patterns:
+          - include: '#comments'
+          - include: '#scripts'
+          - include: '#strings'
+          - include: '#variables'
+
+          - include: '#define'
+          - include: '#include'
+
+          - include: '#DOCTYPE'
+          - include: '#tag'
+          - include: '#tag-id'
+          - include: '#tag-class'
+          - include: '#tag-pointer'
+  tag-style:
+    patterns:
+      - begin: (?=\b(style|STYLE)\b)
+        end: (?=\n|\/[^\*]|\;|\]|\}|\.|\#|\*)
+        patterns:
+          - include: '#comments'
+          - include: '#variables'
+          - include: '#scripts'
+          - include: '#tag-params'
+
+          - match: ([[:word:]]|\-)
+            name: entity.name.tag.html
+
+          - begin: \>
+            end: (?=\n|\}|\;|\])
+            beginCaptures:
+              0:
+                name: punctuation.definition.tag.end.html
+            patterns:
+              - begin: (\{)(?=\'|\s*)
+                beginCaptures:
+                  1:
+                    name: punctuation.definition.directive.cpp
+                  2:
+                    name: keyword.control.directive.cpp
+                end: \}
+                captures:
+                  0:
+                    name: punctuation.definition.directive.cpp
+                patterns:
+                  - include: source.mc
