@@ -1,0 +1,135 @@
+class {
+	// front-private
+	id = Hash();
+
+	// front-public
+	View () {
+		input*input id =i{id} type=checkbox
+		.box>[mx_svg.icon style icon=fill:check-fat]
+		label*label for=i{id}
+	}
+	Style() {/* Tema */
+		@theme-light
+			--box-back              : transparent
+			--box-border            : $!back_10|#2e2e2e
+			--box_icon-color        : $!back_10|#2e2e2e
+			--label-color           : $!back_10|#2e2e2e
+			--input_checked_box-back: $!high|#ffe743
+			--input_hover-back      : $!high_95|#fffdec
+			--input_focus-outline   : $!back_20|#5d5d5d
+			--input_active-back     : $!high_40|#ccb936
+			--input_active-shadow   : $!_back_10|46,46,46
+
+			--input_disabled_box-back      : $!soft_85|#c0c0c0
+			--input_disabled_box-border    : $!soft_85|#c0c0c0
+			--input_disabled_box_icon-color: $!soft_70|#828282
+			--input_disabled_label-color   : $!soft_80|#ababab
+		@theme-dark
+			--box-back           : black
+			--box-border         : $!high|#ffe743
+			--label-color        : $!back|#e8e8e8
+			--input_focus-outline: $!high|#ffe743
+
+			--input_disabled_box-back   : $!back_20|#5d5d5d
+			--input_disabled_box-border : $!back_20|#5d5d5d
+			--input_disabled_label-color: $!soft_65|#6d6d6d
+	}
+	Style() {/* Estilos */
+		align-items: center
+		display    : flex
+		gap        : 5
+		position   : relative
+		>.box
+			align-items     : center
+			background-color: $box-back
+			border          : solid 2 $box-border
+			border-radius   : 7
+			display         : flex
+			height          : 18
+			justify-content : center
+			transition      : background .3s ease-out, color .3s ease-out
+			width           : 18
+			>.icon
+				color  : $box_icon-color
+				display: none
+				width  : 14
+		>.label
+			color      : $label-color
+			font-family: $!font-family_theme|'Trebuchet MS',Arial
+			font-size  : 16
+			line-height: 1
+			margin     : 0
+			padding    : 0
+			user-select: none
+		>.input
+			appearance: none
+			height    : 100%
+			left      : 0
+			margin    : 0
+			outline   : none
+			padding   : 0
+			position  : absolute
+			top       : 0
+			width     : 100%
+			::checked ~ .box
+				background-color: $input_checked_box-back
+				>.icon
+					display: block
+			::hover ~ .box
+				background-color: $input_hover-back
+			::focus ~ .box
+				outline-offset: 2
+				outline       : solid 2 $input_focus-outline
+			::active ~ .box
+				background-color: $input_active-back
+				box-shadow      : inset 0 3 5 rgba($input_active-shadow, 0.5)
+				transition      : none
+			&[disabled]
+				cursor: not-allowed
+				~ .box
+					background-color: $input_disabled_box-back
+					border-color    : $input_disabled_box-border
+					box-shadow      : none
+					>.icon
+						color: $input_disabled_box_icon-color
+				~ .label
+					color: $input_disabled_label-color
+	}
+
+	// front-public
+	Create() {
+		if ( props.caption==null && this.body ) {
+			this.caption = this.body;
+		}
+	}
+
+	// front-public
+	get caption(     ) { return props.caption || '' }
+	set caption( val ) {
+		val             =
+		props.caption   =
+		refs.label.html = String( val );
+	}
+
+	get value(     ) { return !!refs.input.checked }
+	set value( val ) {
+		refs.input.checked = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+	}
+
+	get enabled(     ) { return props.enabled ?? true }
+	set enabled( val ) {
+		val           =
+		props.enabled = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class     ( '_disabled', !val );
+		refs.input.Atts(  'disabled', !val );
+	}
+
+	// front-public
+	focus () {
+		refs.input.focus();
+	}
+	select() {
+		refs.input.focus();
+	}
+}

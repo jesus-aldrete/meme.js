@@ -1,0 +1,64 @@
+class {
+	View () {
+		.shadow
+		header.header
+			h1.title>Opciones[span> | [span>{props.caption}]]
+			.line
+			.cont
+	}
+	Style() {/* Tema */
+		@theme-light
+			--header_back                 : $!back|#e8e8e8
+			--header_title-color          : $!back_10|#2e2e2e
+			--header_title_span-color     : $!back_35|#a2a2a2
+			--header_title_span_span-color: $!high_40|#ccb936
+			--header_line-back            : $!back_35|#a2a2a2
+		@theme-dark
+			--header_back                 : $!back_10|#2e2e2e
+			--header_title-color          : $!back|#e8e8e8
+			--header_title_span-color     : $!soft_65|#6d6d6d
+			--header_title_span_span-color: $!high|#ffe743
+			--header_line-back            : $!soft_65|#6d6d6d
+	}
+	Style() {/* Estilos */
+		position: relative
+		>.shadow
+			border-radius: 100%
+			bottom       : 0
+			box-shadow   : 0 0 10 rgba( 0,0,0,1 )
+			height       : 5
+			left         : 50%
+			opacity      : 0
+			position     : absolute
+			transform    : translateX(-50%)
+			transition   : opacity .3s ease-out
+			width        : 100%
+			z-index      : 1
+		>.header
+			background-color: $header_back
+			display         : flex
+			flex-direction  : column
+			position        : relative
+			width           : 100%
+			z-index         : 2
+			>.title
+				color      : $header_title-color
+				font-size  : 32
+				font-weight: 400
+				line-height: 1.15
+				margin     : 0
+				>span
+					color      : $header_title_span-color
+					font-size  : 14
+					line-height: 1.14
+					>span
+						color: $header_title_span_span-color
+			>.line
+				background: $header_line-back
+				height    : 1
+				margin-top: 10
+	}
+	Style() {/* Estados */
+		&._is_shadow >.shadow:>opacity: 1
+	}
+}
