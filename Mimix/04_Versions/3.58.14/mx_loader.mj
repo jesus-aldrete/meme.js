@@ -1,0 +1,36 @@
+class extends mx_dialog {
+	View  () {
+		! (sag/loader)=onLoader
+		&
+			mx_svg*icon icon=duotone:spinner-ball
+			p*text
+	}
+	Style () {
+		.icon
+			color: $back_10
+			width: 50
+
+		&._play .icon
+			animation: spin 2s linear infinite
+
+		@keyframes spin
+			0%  :>transform: rotate(0deg)
+			100%:>transform: rotate(360deg)
+	}
+	Create() {
+		refs.icon.Play = onPlay;
+		refs.icon.Stop = onStop;
+	}
+
+	// front-private
+	onPlay  (                  ) {
+		this.Class( '_play', true );
+	}
+	onStop  (                  ) {
+		this.Class( '_play', false );
+	}
+	onLoader( _, is_view, text ) {
+		refs.text.html = text ?? '';
+		this.visible   = is_view;
+	}
+}

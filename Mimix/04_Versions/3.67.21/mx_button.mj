@@ -1,0 +1,386 @@
+class extends HTMLButtonElement:button {
+	// front-private
+	waits = /ok|wait|warn|error/;
+
+	// front-public
+	View () {
+		&.default title={props.title} \
+			(blur) =onBlur \
+			(focus)=onFocus \
+			(click)=onClick \
+		>{this.body}
+	}
+	Style() {// DEFAULT
+		@theme-light
+			--mx_button--default--back           : $high|#ffe743
+			--mx_button--default--border         : $back_10|#2e2e2e
+			--mx_button--default--color          : $back_10|#2e2e2e
+			--mx_button--default_hover--back     : $high_95|#fffdec
+			--mx_button--defualt_active--back    : $high_40|#ccb936
+			--mx_button--default_disabled--back  : $soft_90|#d5d5d5
+			--mx_button--default_disabled--color : $soft_75|#979797
+			--mx_button--default_disabled--border: $soft_90|#d5d5d5
+		@theme-dark
+			--mx_button--default--border         : $high|#ffe743
+			--mx_button--default_disabled--back  : $back_20|#5d5d5d
+			--mx_button--default_disabled--border: $back_20|#5d5d5d
+			--mx_button--default_disabled--color : $soft_80|#ababab
+
+		&.default
+			align-items     : center
+			background-color: $mx_button--default--back
+			border          : solid 2 $mx_button--default--border
+			border-radius   : 7
+			color           : $mx_button--default--color
+			display         : flex
+			gap             : 5
+			line-height     : 1
+			padding         : 5 10
+			.mx_svg
+				width: 16
+			::hover
+				background-color: $mx_button--default_hover--back
+			::active
+				background-color: $mx_button--defualt_active--back
+			&[disabled]
+				background-color: $mx_button--default_disabled--back
+				border-color    : $mx_button--default_disabled--border
+				box-shadow      : none
+				color           : $mx_button--default_disabled--color
+				cursor          : not-allowed
+	}
+	Style() {// SECONDARY
+		@theme-light
+			--mx_button--secondary--back          : transparent
+			--mx_button--secondary--border        : $back_20|#5d5d5d
+			--mx_button--secondary--color         : $back_20|#5d5d5d
+			--mx_button--secondary--size          : 2px
+			--mx_button--secondary_hover--back    : $high_95|#fffdec
+			--mx_button--secondary_hover--border  : $high|#ffe743
+			--mx_button--secondary_hover--color   : $back_10|#2e2e2e
+			--mx_button--secondary_active--back   : $high_40|#ccb936
+			--mx_button--secondary_active--border : $high_40|#ccb936
+			--mx_button--secondary_active--color  : $back_10|#2e2e2e
+			--mx_button--secondary_disabled--back : transparent
+			--mx_button--secondary_disabled--boder: transparent
+			--mx_button--secondary_disabled--color: $soft_75|#979797
+		@theme-dark
+			--mx_button--secondary--border        : $back_30|#8b8b8b
+			--mx_button--secondary--color         : $back_30|#8b8b8b
+			--mx_button--secondary--size          : 1px
+			--mx_button--secondary_hover--back    : $high_35|#b3a22f
+			--mx_button--secondary_hover--border  : $high_35|#b3a22f
+			--mx_button--secondary_hover--color   : $back_10|#2e2e2e
+			--mx_button--secondary_active--back   : $high_25|#807422
+			--mx_button--secondary_active--border : $high_25|#807422
+			--mx_button--secondary_active--color  : $back_10|#2e2e2e
+			--mx_button--secondary_disabled--color: $soft_60|#585858
+
+		&.secondary
+			align-items     : center
+			background-color: $mx_button--secondary--back
+			border          : solid $mx_button--secondary--size $mx_button--secondary--border
+			border-radius   : 7
+			color           : $mx_button--secondary--color
+			display         : flex
+			gap             : 5
+			line-height     : 1
+			padding         : 5 10
+			.mx_svg
+				width: 16
+			::hover
+				background-color: $mx_button--secondary_hover--back
+				border-color    : $mx_button--secondary_hover--border
+				color           : $mx_button--secondary_hover--color
+			::active
+				background-color: $mx_button--secondary_active--back
+				border-color    : $mx_button--secondary_active--border
+				color           : $mx_button--secondary_active--color
+			&[disabled]
+				background-color: $mx_button--secondary_disabled--back
+				border-color    : $mx_button--secondary_disabled--boder
+				color           : $mx_button--secondary_disabled--color
+				cursor          : not-allowed
+	}
+	Style() {// ICON
+		@theme-light
+			--mx_button--icon--color       : $back_15
+			--mx_button--icon_focus--color : black
+			--mx_button--icon_hover--color : black
+			--mx_button--icon_active--color: $back_25
+
+			--mx_button--icon_ok--color       : #00a410
+			--mx_button--icon_ok_hover--color : #00a410
+			--mx_button--icon_ok_active--color: #003b06
+
+			--mx_button--icon_wait--color       : #8800ff
+			--mx_button--icon_wait_hover--color : #8800ff
+			--mx_button--icon_wait_active--color: #41007a
+
+			--mx_button--icon_warn--color       : #df8800
+			--mx_button--icon_warn_hover--color : #df8800
+			--mx_button--icon_warn_active--color: #6c4200
+
+			--mx_button--icon_error--color       : #ff0000
+			--mx_button--icon_error_hover--color : #ff0000
+			--mx_button--icon_error_active--color: #5d0000
+		@theme-dark
+			--mx_button--icon--color       : $back_35
+			--mx_button--icon_focus--color : $back
+			--mx_button--icon_hover--color : $high
+			--mx_button--icon_active--color: $high_30
+
+			--mx_button--icon_ok--color       : #17ff00
+			--mx_button--icon_ok_hover--color : #17ff00
+			--mx_button--icon_ok_active--color: #0c8400
+
+			--mx_button--icon_wait--color       : #c983ff
+			--mx_button--icon_wait_hover--color : #c983ff
+			--mx_button--icon_wait_active--color: #7a4b9f
+
+			--mx_button--icon_warn--color       : #ff8f00
+			--mx_button--icon_warn_hover--color : #ff8f00
+			--mx_button--icon_warn_active--color: #8f5000
+
+			--mx_button--icon_error--color       : #ff0000
+			--mx_button--icon_error_hover--color : #ff0000
+			--mx_button--icon_error_active--color: #9c0000
+
+		&.icon
+			background-color: transparent
+			border          : none
+			color           : $mx_button--icon--color
+			margin          : 0
+			padding         : 0
+			transition      : color .3s ease-out
+			::focus
+				color  : $mx_button--icon_focus--color
+				outline: none
+			::hover
+				background-color: transparent
+				color           : $mx_button--icon_hover--color
+			::active
+				background-color: transparent
+				box-shadow      : none
+				color           : $mx_button--icon_active--color
+				transition      : none
+			&.ok
+				background-color: transparent
+				color           : $mx_button--icon_ok--color
+				::hover, ::focus
+					background-color: transparent
+					color           : $mx_button--icon_ok_hover--color
+				::active
+					background-color: transparent
+					color           : $mx_button--icon_ok_active--color
+			&.wait
+				background-color: transparent
+				color           : $mx_button--icon_wait--color
+				::hover, ::focus
+					background-color: transparent
+					color           : $mx_button--icon_wait_hover--color
+				::active
+					background-color: transparent
+					color           : $mx_button--icon_wait_active--color
+			&.warn
+				background-color: transparent
+				color           : $mx_button--icon_warn--color
+				::hover, ::focus
+					background-color: transparent
+					color           : $mx_button--icon_warn_hover--color
+				::active
+					background-color: transparent
+					color           : $mx_button--icon_warn_active--color
+			&.error
+				background-color: transparent
+				color           : $mx_button--icon_error--color
+				::hover, ::focus
+					background-color: transparent
+					color           : $mx_button--icon_error_hover--color
+				::active
+					background-color: transparent
+					color           : $mx_button--icon_error_active--color
+			.mx_svg
+				height: 16
+				width : 16
+	}
+	Style() {
+		@theme-light
+			--mx_button--focus--border : $back_20|#5d5d5d
+			--mx_button--active--shadow: $_back_10|46,46,46
+
+			--mx_button--ok--back       : $cgreen_70|#b3dfbf
+			--mx_button--ok--color      : $back_10|#2e2e2e
+			--mx_button--ok_hover--back : $cgreen_95|#f2faf4
+			--mx_button--ok_active--back: $cgreen|#81c995
+
+			--mx_button--wait--back       : $cpurple_70|#dcb9fb
+			--mx_button--wait--color      : $back_10|#2e2e2e
+			--mx_button--wait_hover--back : $cpurple_95|#f9f3fe
+			--mx_button--wait_active--back: $cpurple|#c58af9
+
+			--mx_button--warn--back       : $corange_70|#fdcea9
+			--mx_button--warn--color      : $back_10|#2e2e2e
+			--mx_button--warn_hover--back : $corange_95|#fff7f1
+			--mx_button--warn_active--back: $corange|#fcad70
+
+			--mx_button--error--back       : $cred_70|#f7b9b4
+			--mx_button--error--color      : $back_10|#2e2e2e
+			--mx_button--error_hover--back : $cred_95|#fef3f3
+			--mx_button--error_active--back: $cred|#f28b82
+		@theme-dark
+			--mx_button--focus--border: $high|#ffe743
+
+		-webkit-user-select: none
+		background         : none
+		border             : none
+		font-family        : $font-family_theme|'Trebuchet MS',Arial
+		font-size          : 16
+		justify-content    : center
+		line-height        : 1
+		margin             : 0
+		padding            : 0
+		transition         : background .3s ease-out, color .3s ease-out, border-color .3s ease-out
+		user-select        : none
+		::focus
+			outline-offset: 2
+			outline       : solid 2 $mx_button--focus--border
+		::active
+			box-shadow: inset 0 3 5 rgba($mx_button--active--shadow, 0.5)
+			transition: none
+
+		&.ok
+			background-color: $mx_button--ok--back
+			color           : $mx_button--ok--color
+			::hover
+				background-color: $mx_button--ok_hover--back
+			::active
+				background-color: $mx_button--ok_active--back
+		&.wait
+			background-color: $mx_button--wait--back
+			color           : $mx_button--wait--color
+			::hover
+				background-color: $mx_button--wait_hover--back
+			::active
+				background-color: $mx_button--wait_active--back
+		&.warn
+			background-color: $mx_button--warn--back
+			color           : $mx_button--warn--color
+			::hover
+				background-color: $mx_button--warn_hover--back
+			::active
+				background-color: $mx_button--warn_active--back
+		&.error
+			background-color: $mx_button--error--back
+			color           : $mx_button--error--color
+			::hover
+				background-color: $mx_button--error_hover--back
+			::active
+				background-color: $mx_button--error_active--back
+	}
+
+	// front-public
+	get rebound_focus(     ) { return props.rebound_focus ?? true }
+	set rebound_focus( val ) { props.rebound_focus=typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val }
+
+	get variant(     ) { return props.variant ?? 'default' }
+	set variant( val ) {
+		val           =
+		props.variant = String( val );
+
+		this.Class( /default|secondary|icon/, false );
+		this.Class( val                     , true  );
+	}
+
+	get enabled(     ) { return props.enabled ?? true }
+	set enabled( val ) {
+		val           =
+		props.enabled = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val
+
+		this.Atts( 'disabled', !val );
+	}
+
+	get wait(     ) { return !!props.wait }
+	set wait( val ) {
+		if      ( !val                   ) props.wait = false;
+		else if (  typeof val==='number' ) props.wait = val || 2000;
+		else                               props.wait = parseFloat( val ) || 2000;
+	}
+
+	get speed(     ) { return !!props.speed }
+	set speed( val ) {
+		val         =
+		props.speed = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class( '_speed'  , val );
+		this.Atts ( 'tabindex', val ? '-1' : '1' );
+	}
+
+	// front-private
+	onBlur ( event ) {
+		this.Class( '_focus', false );
+	}
+	onFocus( event ) {
+		this.Class( '_focus', true );
+
+		if ( !props.speed ) return;
+
+		if ( props.rebound_focus!==false && event.relatedTarget ) event.relatedTarget.focus();
+		else                                                      this.blur();
+	}
+	onClick( event ) {
+		if ( !props.wait ) return;
+
+		clearTimeout( props.timer );
+
+		if ( this.Class( 'ok' ) ) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+
+			this.Class( waits , false );
+			this.Class( 'wait', true  );
+		}
+		else if ( this.Class( 'wait' ) ) {
+			this.Class( waits, false );
+			this.Class( 'ok' , true  );
+		}
+		else {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+
+			this.Class( 'wait', true );
+		}
+
+		props.timer = setTimeout( ()=>{ this.Class( waits, false ) }, props.wait );
+	}
+
+	// front-public
+	Ok    ( wait ) {
+		SetWait( 'ok', wait );
+	}
+	Wait  ( wait ) {
+		SetWait( 'wait', wait );
+	}
+	Warn  ( wait ) {
+		SetWait( 'warn', wait );
+	}
+	Error ( wait ) {
+		SetWait( 'error', wait );
+	}
+	Normal( wait ) {
+		clearTimeout( props.timer );
+		this.Class( waits, false );
+	}
+
+	// front-private
+	SetWait( type, wait ) {
+		clearTimeout( props.timer );
+
+		this.Class( waits, false );
+		this.Class( type , true  );
+
+		if ( wait!==0 ) {
+			props.timer = setTimeout( ()=>{ this.Class( waits, false ) }, wait || props.wait || 2000 );
+		}
+	}
+}

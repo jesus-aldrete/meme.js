@@ -1,0 +1,13 @@
+/* Metodos */
+async function Create ( params ) {
+	return await driver.Trigger( 'CirroMatic/crypto/create', params );
+}
+async function Compare( params ) {
+	return await driver.Trigger( 'CirroMatic/crypto/compare', params );
+}
+// ####################################################################################################
+
+
+/* Exportaciones */
+module.exports = { Create, Compare };
+// ####################################################################################################

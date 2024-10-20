@@ -1,0 +1,198 @@
+class {
+	// configuration
+	static version = '0.0.3'
+
+	// front-public
+	View () {
+		&.{props.title ? '_has_title' : ''}._{props.type} (transitionend)=onEnd
+
+		mx_svg*icon.fill loaded={*[
+			'fill:bell'        ,
+			'fill:warning'     ,
+			'fill:check-circle',
+			'fill:info'        ,
+		]}
+		.cont_texts
+			h2.title>{props.title}
+			p.message>{props.message}
+		.cont_button
+			.cont_close
+				button.btn*time (click)=onTime>08
+				button.btn.close (click)=onClose>[mx_svg.icon icon=fill:x]
+			button.btn*extra
+	}
+	Style() {/* Tema */
+		@theme-light
+			--mx_toast_item__shadow: rgba(0,0,0,.2)
+			--mx_toast_item__cont_texts_title__color  : black
+			--mx_toast_item__cont_texts_message__color: $back_10|#2e2e2e
+			--mx_toast_item__cont_buttons_cont_close_btn__color     : $back_10|#2e2e2e
+			--mx_toast_item__cont_buttons_cont_close_btn_icon__color: #DB3232
+			--mx_toast_item__info__back   : #cfe3ee
+			--mx_toast_item__info__border : #52b8f2
+			--mx_toast_item__warn__back   : #fae9d4
+			--mx_toast_item__warn__border : #fe9f43
+			--mx_toast_item__check__back  : #c8eedb
+			--mx_toast_item__check__border: #0bc46d
+			--mx_toast_item__error__back  : #f9d1d0
+			--mx_toast_item__error__border: #f37a70
+		@theme-dark
+			--mx_toast_item__shadow: rgba(255,255,255,.1)
+			--mx_toast_item__cont_texts_title__color  : white
+			--mx_toast_item__cont_texts_message__color: $back|#e8e8e8
+			--mx_toast_item__cont_buttons_cont_close_btn__color     : $back|#e8e8e8
+			--mx_toast_item__cont_buttons_cont_close_btn_icon__color: #DB3232
+			--mx_toast_item__info__back   : #38464F
+			--mx_toast_item__info__border : #4F9ECB
+			--mx_toast_item__warn__back   : #48433C
+			--mx_toast_item__warn__border : #D68A3F
+			--mx_toast_item__check__back  : #3F4A44
+			--mx_toast_item__check__border: #0D9354
+			--mx_toast_item__error__back  : #423434
+			--mx_toast_item__error__border: #BD5D55
+	}
+	Style() {/* Estilos */
+		align-items   : center
+		border        : solid 1 transparent
+		border-radius : 5 0 0 5
+		border-right  : none
+		box-shadow    : 0 0 10 $mx_toast_item__shadow
+		display       : flex
+		gap           : 10
+		max-width     : 500
+		pointer-events: all
+		pointer-events: all
+		transform     : translateX(110%)
+		transition    : transform .7s ease-out, opacity .5s ease-out, margin-top .5s ease-out
+		>.fill
+			height: 40
+			width : 40
+			margin: 10 0 10 10
+		>.cont_texts
+			display       : flex
+			flex-direction: column
+			gap           : 10
+			margin        : 10 0
+			>.title
+				color      : $mx_toast_item__cont_texts_title__color
+				display    : none
+				font-size  : 18
+				font-weight: bold
+				margin     : 0
+			>.message
+				color : $mx_toast_item__cont_texts_message__color
+				margin: 0
+		>.cont_button
+			align-self    : normal
+			border-color  : inherit
+			display       : flex
+			flex-direction: column
+			>.cont_close
+				border-color: inherit
+				display     : flex
+				flex        : 1
+				>.btn
+					background-color: transparent
+					border          : none
+					border-bottom   : solid 1
+					border-left     : solid 1
+					border-color    : inherit
+					color           : $mx_toast_item__cont_buttons_cont_close_btn__color
+					>.icon
+						color : $mx_toast_item__cont_buttons_cont_close_btn_icon__color
+						height: 20
+						width : 20
+			>.btn
+				background-color : transparent
+				border           : none
+				border-color     : inherit
+				border-left-style: solid
+				border-left-width: 1
+				flex             : 1
+
+		&._type_info :>border-color:$mx_toast_item__info__border; background-color:$mx_toast_item__info__back:> .icon:>color: $mx_toast_item__info__border
+		&._type_warn :>border-color:$mx_toast_item__warn__border; background-color:$mx_toast_item__warn__back:> .icon:>color: $mx_toast_item__warn__border
+		&._type_check:>border-color:$mx_toast_item__check__border;background-color:$mx_toast_item__check__back:>.icon:>color: $mx_toast_item__check__border
+		&._type_error:>border-color:$mx_toast_item__error__border;background-color:$mx_toast_item__error__back:>.icon:>color: $mx_toast_item__error__border
+
+		&._visible:>transform: translateX(0)
+
+		&._has_title >.cont_texts >.title:>display: block
+	}
+
+	// front-public
+	Create() {
+		setTimeout( ()=>{
+			this.Class( '_visible', true );
+		}, 50 );
+	}
+
+	// front-public
+	get time(     ) { return props.time }
+	set time( val ) {
+		if ( typeof val!=='number' ) val = parseInt( val ) || 8;
+
+		clearTimeout( props.time_out );
+
+		props.time     = val;
+		refs.time.html = String( props.time ).padStart( 2, '0' );
+
+		if ( !props.ya_meazure ) Meazure( val );
+
+		if ( props.time<=0 ) onClose();
+		else                 props.time_out = setTimeout( ()=>this.time--, 1000 );
+	}
+
+	get type(     ) { return props.type ?? 'info' }
+	set type( val ) {
+		switch ( val ) {
+			case 'ok'   :
+			case 'check': props.type = 'check'; refs.icon.html = icons['fill:check-circle']; break;
+			case 'warn' : props.type = 'warn' ; refs.icon.html = icons['fill:bell'        ]; break;
+			case 'error': props.type = 'error'; refs.icon.html = icons['fill:warning'     ]; break;
+			default     : props.type = 'info' ; refs.icon.html = icons['fill:info'        ]; break;
+		}
+
+		this.Class( /_type_/               , false );
+		this.Class( `_type_${ props.type }`, true  );
+	}
+
+	// front-private
+	onEnd   ( event ) {
+		if ( props.is_close && event.propertyName==='opacity' && event.target===this ) {
+			this.Remove();
+		}
+	}
+	onTime  (       ) {
+		this.time+= 5;
+	}
+	onClose (       ) {
+		props.is_close = true;
+
+		this.Css( 'margin-top', -this.Position().height - 20 );
+		this.Css( 'opacity'   , 0 );
+	}
+	onRetime(       ) {
+		this.time+= 5;
+	}
+
+	// front-private
+	Meazure( time ) {
+		props.ya_meazure    = true;
+		const style         = window.getComputedStyle( refs.time );
+		const font          = style.fontSize + ' ' + style.fontFamily;
+		const canvas        = document.createElement( 'canvas' );
+		const ctx           = canvas.getContext( '2d' );
+		ctx.font            = font;
+		const width_letter  = ctx.measureText( '0' );
+		const margin_left   = parseFloat( style.marginLeft   ) || 0;
+		const margin_right  = parseFloat( style.marginRight  ) || 0;
+		const padding_left  = parseFloat( style.paddingLeft  ) || 0;
+		const padding_right = parseFloat( style.paddingRight ) || 0;
+		let   time_length   = time.toString().length || 1;
+
+		if ( time_length<2 ) time_length = 2;
+
+		refs.time.Css({ minWidth:( ( width_letter.width * time_length ) + padding_left + margin_left + padding_right + margin_right ) + 'px' });
+	}
+}

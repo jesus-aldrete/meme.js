@@ -1,0 +1,65 @@
+class {
+	View () {
+		.shadow
+		header.header
+			h1.title>Opciones[span> | [span>{props.caption}]]
+			.line
+			.cont
+	}
+	Style() {/* Tema */
+		@theme-light
+			--mx_options_header__header__back                 : $back|#e8e8e8
+			--mx_options_header__header_title__color          : $back_10|#2e2e2e
+			--mx_options_header__header_title_span__color     : $back_35|#a2a2a2
+			--mx_options_header__header_title_span_span__color: $high_40|#ccb936
+			--mx_options_header__header_line__separator       : $back_35|#a2a2a2
+		@theme-dark
+			--mx_options_header__header__back                 : $back_10|#2e2e2e
+			--mx_options_header__header_title__color          : $back|#e8e8e8
+			--mx_options_header__header_title_span__color     : $soft_65|#6d6d6d
+			--mx_options_header__header_title_span_span__color: $high|#ffe743
+			--mx_options_header__header_line__separator       : $soft_65|#6d6d6d
+	}
+	Style() {/* Estilos */
+		position: relative
+		>.shadow
+			border-radius: 100%
+			bottom       : 0
+			box-shadow   : 0 0 10 rgba( 0,0,0,1 )
+			height       : 5
+			left         : 50%
+			opacity      : 0
+			position     : absolute
+			transform    : translateX(-50%)
+			transition   : opacity .3s ease-out
+			width        : 100%
+			z-index      : 1
+		>.header
+			background-color: $mx_options_header__header__back
+			display         : flex
+			flex-direction  : column
+			position        : relative
+			width           : 100%
+			z-index         : 2
+			>.title
+				color      : $mx_options_header__header_title__color
+				font-size  : 32
+				font-weight: 400
+				line-height: 1.15
+				margin     : 0
+				>span
+					color      : $mx_options_header__header_title_span__color
+					font-size  : 14
+					line-height: 1.14
+					>span
+						color: $mx_options_header__header_title_span_span__color
+			>.line
+				background: $mx_options_header__header_line__separator
+				height    : 1
+				margin-top: 10
+	}
+	Style() {/* Estados */
+		&._is_shadow >.shadow
+			opacity: 1
+	}
+}

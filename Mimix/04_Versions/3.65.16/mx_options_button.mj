@@ -1,0 +1,141 @@
+class {
+	// front-private
+	icons = {
+		close: '<path fill="currentColor" d="M14.4444 11.6667V8.88889H4.44444V11.6667H14.4444Z"/>',
+		open : '<path fill="currentColor" d="M14 9.8L12 8L9 10.7L6 8L4 9.8L7 12.5L9 14.3L11 12.5L14 9.8Z"/>',
+	};
+
+	// front-public
+	View () {
+		button.btn (click)=onClick
+			slot id=image
+			.cont
+				.caption>{props.caption ?? ''}
+				.desc>{props.description ?? ''}
+			*arrow
+		.line
+		.cont>[slot id=content]
+	}
+	Style() {/* Tema */
+		@theme-light
+			--mx_options_button__btn__back                : $back_55|#eaeaea
+			--mx_options_button__btn_focus__border        : $high|#ffe743
+			--mx_options_button__btn_hover__back          : $back_45|#d1d1d1
+			--mx_options_button__btn_cont_caption__color  : $back_10|#2e2e2e
+			--mx_options_button__btn_cont_desc__color     : $back_25|#747474
+			--mx_options_button__btn_arrow_svg__color     : $back_25|#747474
+			--mx_options_button__open_btn_arrow_svg__color: $back_15|#464646
+			--mx_options_button__btn_image__color         : $back_10|#2e2e2e
+			--mx_options_button__line__back               : $back_55|#eaeaea
+			--mx_options_button__line_after__back         : $back_40|#bababa
+			--mx_options_button__cont__back               : $back_55|#eaeaea
+		@theme-dark
+			--mx_options_button__btn__back                : $soft_30|#1c1c1c
+			--mx_options_button__btn_focus__border        : $high|#ffe743
+			--mx_options_button__btn_hover__back          : $soft_5|#050505
+			--mx_options_button__btn_cont_caption__color  : $back|#e8e8e8
+			--mx_options_button__btn_cont_desc__color     : $back_30|#8b8b8b
+			--mx_options_button__btn_arrow_svg__color     : $back_30|#8b8b8b
+			--mx_options_button__open_btn_arrow_svg__color: $back|#e8e8e8
+			--mx_options_button__btn_image__color         : $back|#e8e8e8
+			--mx_options_button__line__back               : $soft_30|#1c1c1c
+			--mx_options_button__line_after__back         : $soft_55|#434343
+			--mx_options_button__cont__back               : $soft_30|#1c1c1c
+	}
+	Style() {/* Estilos */
+		width: 100%
+		>.btn
+			align-items: center
+			background : $mx_options_button__btn__back
+			border     : none
+			border     : dashed 1 transparent
+			box-sizing : border-box
+			display    : flex
+			gap        : 15
+			outline    : none
+			padding    : 10
+			transition : background .3s ease-out
+			width      : 100%
+			::focus
+				border-color: $mx_options_button__btn_focus__border
+			::hover
+				background: $mx_options_button__btn_hover__back
+			.image, svg
+				align-items    : center
+				color          : $mx_options_button__btn_image__color
+				display        : flex
+				height         : 35
+				justify-content: center
+				width          : 35
+			>.cont
+				display       : flex
+				flex          : 1
+				flex-direction: column
+				gap           : 5
+				user-select   : none
+				>.caption
+					color      : $mx_options_button__btn_cont_caption__color
+					font-size  : 16
+					line-height: 1
+					text-align : left
+				>.desc
+					color      : $mx_options_button__btn_cont_desc__color
+					font-size  : 12
+					line-height: 1
+					text-align : left
+			>.arrow >svg
+				color : $mx_options_button__btn_arrow_svg__color
+				height: 25
+				width : 25
+		.line
+			background: $mx_options_button__line__back
+			height    : 1
+			position  : relative
+			::after
+				background: $mx_options_button__line_after__back
+				bottom    : 0
+				content   : ''
+				left      : 10
+				position  : absolute
+				right     : 10
+				top       : 0
+		>.cont
+			background   : $mx_options_button__cont__back
+			display      : none
+			gap          : 10
+			margin-bottom: 5
+			padding      : 10
+	}
+	Style() {/* Estados */
+		&._open
+			>.btn >.arrow >svg:>color: $mx_options_button__open_btn_arrow_svg__color
+			>.cont            :>display: flex
+	}
+
+	// front-public
+	Create() {
+		if ( props.open==null )
+			this.open = false
+	}
+
+	// front-public
+	get open(     ) {
+		return props.open;
+	}
+	set open( val ) {
+		val = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		if ( props.open!==val ) this.Trigger( 'open', val )
+
+		props.open = val;
+
+		this.Class( '_open', props.open );
+
+		refs.arrow.html = `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">${ props.open ? icons.open : icons.close }</svg>`;
+	}
+
+	// front-private
+	onClick() {
+		this.open = !this.open;
+	}
+}

@@ -124,4 +124,12 @@ class {
 		this.Class     ( '_disabled', !val );
 		refs.input.Atts(  'disabled', !val );
 	}
+
+	// front-public
+	focus () {
+		refs.input.focus();
+	}
+	select() {
+		refs.input.focus();
+	}
 }

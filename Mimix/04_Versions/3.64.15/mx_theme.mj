@@ -1,0 +1,172 @@
+class {
+	// configuration
+	static version = '0.0.1';
+	static require = false;
+
+	// front-public
+	Tag() {
+		/* Declaraciones */
+		const { Typeof                 } = require( 'meme:lib' );
+		const { file, props:{ colors } } = this;
+		// **************************************************
+
+		/* Funciones */
+		function HEXToRGBA  ( color  ) {
+			const match  = /\#?(\w{2})(\w{2})(\w{2})(\w{2})?/.exec( color );
+			const result = {
+				r: parseInt( match[1]        , 16 ),
+				g: parseInt( match[2]        , 16 ),
+				b: parseInt( match[3]        , 16 ),
+				a: parseInt( match[4] ?? 'FF', 16 ) / 255,
+			};
+
+			result.h = (
+				'#' +
+				result.r.toString( 16 ).padStart( 2, '0' ) +
+				result.g.toString( 16 ).padStart( 2, '0' ) +
+				result.b.toString( 16 ).padStart( 2, '0' )
+			);
+
+			return result;
+		}
+		function ColorRange ( color  ) {
+			let   level        = -5;
+			const steps        = 11;
+			const color_range  = [];
+			const color_to_hex = color => ({
+				...color,
+				h: (
+					'#' +
+					color.r.toString( 16 ).padStart( 2, '0' ) +
+					color.g.toString( 16 ).padStart( 2, '0' ) +
+					color.b.toString( 16 ).padStart( 2, '0' )
+				)
+			});
+			const interpolate  = ( color1, color2, factor ) => ({
+				i: level+=5,
+				r: Math.round( color1.r + ( factor ?? .5 ) * ( color2.r - color1.r ) ),
+				g: Math.round( color1.g + ( factor ?? .5 ) * ( color2.g - color1.g ) ),
+				b: Math.round( color1.b + ( factor ?? .5 ) * ( color2.b - color1.b ) ),
+			});
+			color.h            = color_to_hex( color ).h;
+
+			for( let i = 0        ; i< steps; i++ ) color_range.push( interpolate( { r:0  , g:0  , b:0   }, color, i / ( steps - 1 ) ) );
+			for( let i = steps - 2; i>=0    ; i-- ) color_range.push( interpolate( { r:255, g:255, b:255 }, color, i / ( steps - 1 ) ) );
+
+			return color_range.slice( 1, -1 ).map( color_to_hex );
+		}
+		function WriteSchema( colors ) {
+			let res_rgb   = '';
+			let res_color = '';
+			colors        = Object.entries( colors )
+			.map( ([ key,value ]) => ({ ...value, key }) )
+
+			for ( const color of colors ) {
+				res_rgb  += `--_${color.key}:${color.r},${color.g},${color.b};`;
+				res_color+= `--${ color.key}:${color.h};`;
+			}
+
+			return res_color + res_rgb;
+		}
+		// **************************************************
+
+		/* Get */
+		async function GetColors() {
+			if ( !colors ) return null;
+
+			let   obj;
+			const PointerFromReference = ( value )=>{ obj = value };
+
+			try {
+				eval( '`'+ colors +'`' );
+
+				return Object.assign( {}, GetDefault(), obj );
+			}
+			catch ( e ) {
+				console.Error( `Error al cargar los colores: ${e.message}` );
+				console.Error( e.trace );
+
+				return null;
+			}
+		}
+
+		function GetDefault(        ) {
+			return {
+				back: {color:'E8E8E8', scrape:true},
+				high: {color:'ffe743', scrape:true},
+				soft: {color:'2E2E2E', scrape:true},
+
+				cblue  : { color:'8ab4f8', scrape:true },
+				cred   : { color:'f28b82', scrape:true },
+				cyellow: { color:'fdd663', scrape:true },
+				cgreen : { color:'81c995', scrape:true },
+				cpink  : { color:'ff8bcb', scrape:true },
+				cpurple: { color:'c58af9', scrape:true },
+				ccyan  : { color:'78d9ec', scrape:true },
+				corange: { color:'fcad70', scrape:true },
+			};
+		}
+		function GetScrape ( colors ) {
+			const res = {};
+
+			for ( const [key, color] of Object.entries( colors ) ) {
+				switch ( Typeof( color ) ) {
+					case 'string': res[key] = HEXToRGBA( color ); break;
+					case 'object':
+						res[key] = HEXToRGBA( color.color );
+
+						if ( color.scrape )
+						for ( const [index,range] of ColorRange( res[key] ).entries() ) {
+							res[`${key}_${(index * 5) + 5}`] = { index, ...range };
+						}
+					break;
+				}
+			}
+
+			return res;
+		}
+		// **************************************************
+
+		/* Inicio */
+		async function Inicio() {
+			let
+			col = await GetColors() ?? GetDefault();
+			col = GetScrape  ( col );
+			col = WriteSchema( col );
+
+			return (
+				'<style>' +
+					':root, .theme-light {' +
+						'--color_theme: var(--background_10, #2E2E2E);' +
+						'--background_theme: var(--background, #E8E8E8);' +
+					'}' +
+					'@media (prefers-color-scheme: dark) {' +
+						':root {' +
+							'--color_theme: var(--background, #E8E8E8);' +
+							'--background_theme: var(--background_10, #2E2E2E);' +
+						'}' +
+					'}' +
+					':root,::backdrop {' +
+						col +
+						"--font-family_theme:'Trebuchet MS', Arial;" +
+						'--animation:.3s ease-out;' +
+					'}' +
+					'body{' +
+						'color:var(--color_theme);' +
+						'background-color:var(--background_theme);' +
+						"font-family:'Trebuchet MS', Arial;" +
+						'font-size:16px;' +
+					'}' +
+					'*{' +
+						'color:inherit;' +
+						'font-family:inherit;' +
+						'font-size:inherit;' +
+						'font-weight:inherit;' +
+						'line-height:inherit;' +
+					'}' +
+				'</style>'
+			);
+		};return await Inicio();
+		// **************************************************
+	}
+}

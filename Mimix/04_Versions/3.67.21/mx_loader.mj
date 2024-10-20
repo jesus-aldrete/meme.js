@@ -1,0 +1,50 @@
+class extends mx_dialog {
+	// front-private
+	counts = 0;
+
+	// front-public
+	View  () {
+		! (mx/loader)=onLoader
+		&
+			mx_svg*icon icon=duotone:spinner-ball
+			p*text
+	}
+	Style () {
+		@theme-light
+			--mx_loader--color: $back_10
+		@theme-dark
+			--mx_loader--color: $back
+
+		.icon
+			color: $mx_loader--color
+			width: 50
+
+		&._play .icon
+			animation: spin 2s linear infinite
+
+		@keyframes spin
+			0%  :>transform: rotate(0deg)
+			100%:>transform: rotate(360deg)
+	}
+	Create() {
+		refs.icon.Play = onPlay;
+		refs.icon.Stop = onStop;
+	}
+
+	// front-private
+	onPlay  (                  ) {
+		this.Class( '_play', true );
+	}
+	onStop  (                  ) {
+		this.Class( '_play', false );
+	}
+	onLoader( _, is_view, text ) {
+		if ( is_view ) counts++;
+		else           counts--;
+
+		if ( counts<0 ) counts = 0;
+
+		refs.text.html = text ?? '';
+		this.visible   = counts>0;
+	}
+}

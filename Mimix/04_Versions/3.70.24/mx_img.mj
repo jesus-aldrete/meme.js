@@ -1,0 +1,228 @@
+class {
+	Tag () {
+		/* Declaraciones */
+		const {
+			element       : { clase },
+			file          : ofile,
+			props , props : { src },
+			config, config: { res:{ sources } },
+			compilers     ,
+		} = this;
+
+		const { Mime, Hash, Fetch, ParsePath } = require( 'meme:lib' );
+		const cache                            = Cache();
+
+		/* Clases */
+		function Cache() {
+			/* Declaraciones */
+			let   cache      ;
+			const cache_path = config.constants.work_space.path + '/images.meme.cache';
+
+			/* Metodos */
+			function Load() {
+				const ofile = ParsePath( cache_path );
+
+				if ( ofile.type!=='file' ) return {};
+
+				try {
+					return JSON.parse( ofile.Read() );
+				}
+				catch( e ) {
+					console.Error( `cd[mx_img:Load:LoadCache]: ${e.message}` );
+					console.trace();
+
+					return {};
+				}
+			}
+			function Save() {
+				const ofile = ParsePath( cache_path );
+
+				ofile.Write(
+					JSON.stringify( cache, 0, '\t' )
+				);
+			}
+
+			async function Get( ofile ) {
+				ofile.data = ofile.Read( false ).toString( 'base64' );
+				const body = {
+					...props,
+					...{ src:undefined },
+
+					buffer: ofile.data,
+				};
+
+				const id = Hash( JSON.stringify( body ) );
+
+				if ( cache[ofile.path]?.id===id ) return cache[ofile.path];
+
+				console.Info( `fb[process:] ${ofile.path}` );
+
+				const result = await driver.Trigger( 'CirroMatic/image', body );
+
+				if ( !result ) return;
+
+				cache[ofile.path]    = result;
+				cache[ofile.path].id = id;
+
+				return result;
+			}
+
+			/* Inicio */
+			function Inicio() {
+				if ( global._mximg_images_cache ) return global._mximg_images_cache;
+
+				cache = Load();
+
+				return global._mximg_images_cache = { Load, Save, Get };
+			};return Inicio();
+		}
+
+		/* Funciones */
+		function GetOFile ( url_res            ) {
+			let   fil ;
+			url_res   = '[[RES]]'==='.' ? url_res : url_res.replaceAll( '[[RES]]', '' );
+			url_res   = url_res.replace( /^\.(\\|\/)/gm, '/' );
+			const rex = new RegExp( url_res + '$', 'gmi' );
+
+			for ( const source of sources ) {
+				if ( source.type!=='folder' ) continue;
+
+				const ofiles = source.Travel({ ignore:config.res.ignore, filter:[rex] });
+
+				if ( ofiles.length===1 ) {
+					fil = ofiles[0];
+					break;
+				}
+			}
+
+			if ( !fil || fil.type!=='file' ) return;
+
+			return fil;
+		}
+		function GetClases(                    ) {
+			const clases = [...clase];
+
+			clases.push( 'mx_img' );
+
+			return clases.join( ' ' );
+		}
+		function GetTypes ( url, ofile, result ) {
+			let   types         = '';
+			const formats_order = [];
+
+			const proto  = Object.assign( {}, ofile );
+			const images = [];
+
+			for ( const [ext,format] of Object.entries( result.formats ) ) {
+				let index = 10;
+
+				switch ( ext ) {
+					case 'avif': index = 0; break;
+					case 'webp': index = 1; break;
+				}
+
+				formats_order.push({ ext, index, xs:Object.values( format ).map( v => v.x ).sort() });
+			}
+
+			return formats_order
+			.sort( ( a, b ) => a.index - b.index )
+			.reduce( ( r, v ) => {
+				const src = v.xs.reduce(
+					( rr, vv ) => {
+						if ( rr ) rr+= ', ';
+
+						return `${rr}{{RES}}${url}@${vv}x.${v.ext}${ vv===1 ? '' : ` ${vv}x` }`;
+					},
+					''
+				);
+
+				return r + `<source type="${Mime( v.ext )}" srcset="${src}">`
+			}, '' );
+		}
+
+		async function SetImages( ofile, oimages ) {
+			const proto = Object.assign( {}, ofile );
+			const files = [proto];
+			proto.data  = { type:'base64', buffer:oimages.buffer };
+			proto.url  += proto.ext;
+
+			for ( const [ext,formats] of Object.entries( oimages.formats ) ) {
+				for ( const x_format of Object.values( formats ) ) {
+					const data = Object.assign(
+						{},
+						proto,
+						{
+							ext : '.' + ext,
+							url : `${ofile.url}@${x_format.x}x.${ext}`,
+							name: `${ofile.name}@${x_format.x}x`,
+							base: `${ofile.name}@${x_format.x}x.${ext}`,
+							path: `${ofile.dir}/${ofile.name}@${x_format.x}x.${ext}`,
+							data: { type:'base64', buffer:x_format.buffer },
+						}
+					);
+
+					files.push( data );
+				}
+			}
+
+			await driver.Trigger( 'project/res/add', { files } );
+		}
+
+		/* Inicio */
+		async function Inicio() {
+			await driver.Connect( '[[token_matic]]' );
+
+			const url   = ( '[[RES]]'==='.' ? src : src.replace( '[[RES]]', '' ) ).replace( /\.[a-z]*$/gi, '' ).replace( /^\.(\\|\/)/, '/' );
+			const ofile = GetOFile( src );
+
+			if ( !ofile ) {
+				console.Error( `no existe el archivo: ${src}` );
+				return;
+			}
+
+			ofile.url    = url;
+			const result = await cache.Get( ofile );
+
+			if ( !result ) {
+				console.Error( `mx_img:Inicio: no se pudo procesar la imagen: ${ofile.path}` );
+				return;
+			}
+
+			await SetImages( ofile, result );
+
+			if ( result.html ) {
+				return {
+					require: false,
+					code   : result.html.replaceAll( '{{RES}}', '[[RES]]' ),
+				};
+			}
+
+			/* Size */
+			const width        = parseFloat( props.width  ) || 0;
+			const height       = parseFloat( props.height ) || 0;
+			result.real_width  = result.width ;
+			result.real_height = result.height;
+
+			if ( width  ) result.width  = width ; else result.width  = null;
+			if ( height ) result.height = height; else result.height = null;
+
+			if (  result.width && !result.height ) result.height = ( result.real_height * result.width  ) / result.real_width ;
+			if ( !result.width &&  result.height ) result.width  = ( result.real_width  * result.height ) / result.real_height;
+
+			/* Html */
+			result.html = (
+				`<picture class="${GetClases()}">`                                                                                        +
+					GetTypes( url, ofile, result )                                                                                        +
+					`<img src="{{RES}}${url}@1x${ofile.ext}" alt="${props.alt || ''}" width="${result.width}" height="${result.height}">` +
+				'</picture>'
+			);
+
+			cache.Save();
+
+			return {
+				require: false,
+				code   : result.html.replaceAll( '{{RES}}', '[[RES]]' ),
+			};
+		};return await Inicio();
+	}
+}

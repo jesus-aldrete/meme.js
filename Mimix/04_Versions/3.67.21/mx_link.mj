@@ -1,0 +1,79 @@
+class extends HTMLAnchorElement:a {
+	View () {
+		& (click)=onClick>{this.body}
+	}
+	Style() {
+		@theme-light
+			--mx_button__button__back        : $high
+			--mx_button__button__color       : $soft
+			--mx_button__button__border      : $soft_40
+			--mx_button__button_hover__back  : $high_70
+			--mx_button__button_active__back : $high_40
+			--mx_button__button_focus__shadow: rgba($_high, .3)
+		@theme-dark
+			--mx_button__button__back        : $high
+			--mx_button__button__color       : $soft
+			--mx_button__button__border      : black
+			--mx_button__button_hover__back  : $high_70
+			--mx_button__button_active__back : $high_40
+			--mx_button__button_focus__shadow: rgba($_high, .3)
+
+		display        : flex
+		text-decoration: inherit
+		transition     : color $animation
+
+		&._variant_button
+			align-items     : center
+			background-color: $mx_button__button__back
+			border-radius   : 1000
+			border          : solid 1 $mx_button__button__border
+			box-sizing      : border-box
+			color           : $mx_button__button__color
+			display         : flex
+			gap             : 5
+			outline         : none
+			padding         : 8 16
+			transition      : background-color $animation, color $animation
+			::visited
+				background-color: $mx_button__button__back
+				border          : solid 1 $mx_button__button__border
+				color           : $mx_button__button__color
+			::hover
+				background-color: $mx_button__button_hover__back
+			::active
+				background-color: $mx_button__button_active__back
+				transition      : none
+			&._focus
+				box-shadow: 0 0 1 3 $mx_button__button_focus__shadow;
+			&._wait_ok   :>background-color: $cgreen
+			&._wait_wait :>background-color: $cpurple_70
+			&._wait_warn :>background-color: $cyellow
+			&._wait_error:>background-color: $cred;color: $back
+			&._disabled
+				background-color: $mx_button__button__back
+				cursor          : not-allowed
+				opacity         : .3
+	}
+
+	// front-public
+	get variant(     ) { return props.variant ?? 'default' }
+	set variant( val ) {
+		val           =
+		props.variant = String( val );
+
+		this.Class( /_variant_/      , false );
+		this.Class( `_variant_${val}`, true  );
+	}
+
+	// front-private
+	onClick( event ) {
+		const url = new URL( this.href );
+
+		if ( url.host!==location.host ) return;
+
+		event.preventDefault();
+		event.stopPropagation();
+
+		this.Trigger( 'mx/router/push', url );
+	}
+}

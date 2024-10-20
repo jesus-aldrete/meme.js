@@ -1,0 +1,136 @@
+class extends mx_input_box {
+	// front-public
+	id_input = 'i' + Hash();
+
+	// front-public
+	View () {
+		&._no_caption (click)=onClick
+
+		input*input id={this.id_input} (focus)=onFocus (blur)=onBlur (input)=onInput (keydown)=onKeyDw (keyup)=onKeyUp
+		mx_button*btn speed=true (click)=onClickPassword title=view_pass>[mx_svg*icon icon=regular:password loaded={*['fill:password','regular:password']}]
+	}
+	Style() {
+		>.input
+			background : transparent
+			border     : none
+			flex       : 1
+			font-family: $font-family_theme|'Trebuchet MS',Arial
+			font-size  : 16
+			line-height: 1
+			outline    : none
+			padding    : 0
+			z-index    : 2
+			::::selection
+				background-color: $mx_input--selection--back
+				color           : $mx_input--selection--color
+			::::-ms-reveal, ::::-ms-clear
+				display: none
+			::::-webkit-credentials-auto-fill-button
+				display: none
+		>.btn
+			border       : none
+			border-radius: 0
+			display      : none
+			padding      : 0
+			>.icon
+				height: 16
+				width : 16
+
+		&._no_caption >.label
+			display: none
+
+		&._type_password >.btn
+			display: block
+	}
+
+	// front-public
+	get caption(     ) { return props.caption ?? '' }
+	set caption( val ) {
+		props.caption       =
+		refs.sublabel.html  =
+		refs.label   .html  =
+		refs.input   .title = String( val );
+
+		this.Class( '_no_caption', !props.caption );
+	}
+
+	get type(     ) { return refs.input.type }
+	set type( val ) {
+		refs.input.type = val;
+
+		this.Class( /_type_/        , false );
+		this.Class( `_type_${ val }`, true  );
+	}
+
+	get value(     ) { return refs.input.value }
+	set value( val ) {
+		refs.input.value = val;
+
+		onInput();
+	}
+
+	get enabled(     ) { return !!( props.enabled ?? true ) }
+	set enabled( val ) {
+		val           =
+		props.enabled = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this      .Class( '_disabled', !val );
+		refs.input.Atts (  'disabled', !val );
+
+		refs.btn.enabled = val;
+	}
+
+	// front-private
+	onClick() {
+		refs.input.focus();
+	}
+
+	onFocus() {
+		this.Class( '_focus', true );
+	}
+	onBlur () {
+		this.Class( '_focus', false );
+	}
+	onInput() {
+		this.Class( '_fill', !!refs.input.value );
+	}
+
+	onKeyDw( event ) {
+		switch ( event.code ) {
+			case 'Enter' : event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); break;
+			case 'Escape': event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); break;
+		}
+	}
+	onKeyUp( event ) {
+		switch ( event.code ) {
+			case 'Enter' : event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); this.Trigger( 'enter'  ); break;
+			case 'Escape': event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); this.Trigger( 'escape' ); break;
+			case 'Tab'   : this.Trigger( 'tab'  ); break;
+		}
+	}
+
+	onClickPassword( event ) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		const selection  = refs.input.selectionStart;
+		const is_regular = refs.icon.svg==='regular:password';
+		refs.icon.svg    = is_regular ? 'fill:password' : 'regular:password';
+		refs.input.type  = is_regular ? 'text'          : 'password';
+
+		refs.input.focus();
+
+		setTimeout( ()=>{
+			refs.input.selectionStart =
+			refs.input.selectionEnd   = selection;
+		}, 0 );
+	}
+
+	// front-public
+	focus () {
+		refs.input.focus();
+	}
+	select() {
+		refs.input.select();
+	}
+}

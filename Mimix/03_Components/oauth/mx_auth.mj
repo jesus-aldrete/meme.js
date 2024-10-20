@@ -1,17 +1,18 @@
-const mongo                                                    = require( 'meme:mx_mongo'  );
-const crypto                                                   = require( 'meme:mx_crypto' );
-const { Typeof, EncodeJWE, DecodeJWE, DecodeBase64Url, Sleep } = require( 'meme:lib'       );
+const mongo                                                    = require( 'meme:mx_mongo'    );
+const crypto                                                   = require( 'meme:mx_crypto'   );
+const postgres                                                 = require( 'meme:mx_postgres' );
+const { Typeof, EncodeJWE, DecodeJWE, DecodeBase64Url, Sleep } = require( 'meme:lib'         );
 
 class {
 	// back-private
-	async ClearCookie ( socket, pause ) {
+	async ClearCookie    ( socket, pause ) {
 		if ( pause ) await Sleep( 1000 );
 
 		socket.extra_headers.push( 'Set-Cookie: token=0; Max-Age=0; HttpOnly' );
 
 		return false;
 	}
-	async GetUserMongo( config, user  ) {
+	async GetUserMongo   ( config, user  ) {
 		if ( !config ) {
 			console.Error( 'Falta proporcionar una configuracion al componente de "auth"' );
 			return false;
@@ -36,6 +37,28 @@ class {
 		}
 
 		return res.result[0];
+	}
+	async GetUserPostgres( config, user  ) {
+		if ( !config ) {
+			console.Error( 'Falta proporcionar una configuracion al componente de "auth"' );
+			return false;
+		}
+
+		let res = await postgres.Connect( config );
+
+		if ( !res ) {
+			console.Error( 'No se pudo conectar a la base "postgres"' );
+			return false;
+		}
+
+		res = await postgres.Sql( `SELECT * FROM ${config.postgres.db_name}.users WHERE users.user=$1`, [user] );
+
+		if ( res.rows.length!==1 ) {
+			console.Error( 'No se encontro el usuario en la base postgres' );
+			return false;
+		}
+
+		return res.rows[0];
 	}
 
 	async ValidUser( user, pass, value ) {
@@ -99,6 +122,8 @@ class {
 
 		if ( !token ) return;
 
+		this.token = token;
+
 		return !!token.is_valid;
 	}
 
@@ -118,18 +143,31 @@ class {
 		catch { return response() };
 
 		let   res;
-		const { user, password, db, config:conf } = token;
+		const { user, password, db_type, config:conf } = token;
 		const con = this.config.constants[conf||'token'];
 
-		switch ( db ) {
-			default: res = await GetUserMongo( con, user );
+		switch ( db_type ) {
+			case 'mongo'   : res = await GetUserMongo   ( con, user ); break;
+			case 'postgres': res = await GetUserPostgres( con, user ); break;
+			default        : console.Error( `no existe el tipo de base de datos: fy[${db_type}]` ); return response();
 		}
 
-		if ( !res ) { await Sleep( 1000 ); return }
+		if ( !res ) { await Sleep( 1000 ); return response() }
 
-		res = await ValidUser( user, password, res.password );
+		const is_valid = await ValidUser( user, password, res.password );
 
-		return response( res===true ? EncodeJWE( '[[jwe_secret]]', { user, is_valid:true }) : null );
+		if ( is_valid ) {
+			res = { user, is_valid };
+
+			const rev = await global.driver.Trigger( 'mx/auth/token/create', res );
+
+			if ( rev ) res = rev;
+
+			res = EncodeJWE( '[[jwe_secret]]', res );
+		}
+		else res = undefined;
+
+		return response( res );
 	}
 	async Logout(      ) {
 		return {
@@ -174,8 +212,8 @@ class {
 		let   result;
 
 		switch ( props.type ) {
-			case 'socket': result = await window._meme_protocol.Connect({ user, password, db:props.db, config:props.config }); break;
-			default      : result = await Login( EncodeBase64Url({ user, password, db:props.db, config:props.config }) ); break;
+			case 'socket': result = await window._meme_protocol.Connect({ user, password, db_type:props.db_type, config:props.config })  ; break;
+			default      : result = await Login( EncodeBase64Url       ({ user, password, db_type:props.db_type, config:props.config }) ); break;
 		}
 
 		if ( result===true ) this.Trigger( 'mx/auth/ok'    );

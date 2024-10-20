@@ -1,0 +1,91 @@
+class {
+	// front-private
+	db;
+
+	// front-public
+	Style() {
+		display: none
+	}
+
+	// front-public
+	Connect( params ) {
+		if ( typeof params!='object' ) return;
+
+		const { name, struct } = params;
+		props.params           = params;
+
+		return new Promise( ( run, err ) => {
+			if ( !name || !struct || !Object.keys( struct ).length || props.connected ) return;
+
+			props.in_connect   = true;
+			db                 = window.indexedDB.open( name, 1 );
+			db.onerror         = x => {
+				props.in_connect = false;
+				props.connected  = false;
+
+				err( x );
+			};
+			db.onupgradeneeded = x => {
+				db = x.target.result;
+
+				for ( const v of struct )
+					db.createObjectStore( v.name, v );
+			};
+			db.onsuccess       = x => {
+				db               = x.target.result;
+				props.in_connect = false;
+				props.connected  = true;
+
+				run();
+			};
+		});
+	}
+
+	Getter( collection       ) {
+		return new Promise( ( run, err )=>{
+			const transaction = db.transaction( collection, 'readonly' );
+
+			transaction.onerror = err;
+
+			const store   = transaction.objectStore( collection );
+			const request = store.getAll();
+
+			request.onsuccess = () => run( request.result );
+		});
+	}
+	Insert( collection, data ) {
+		return new Promise( ( run, err )=>{
+			const transaction = db.transaction( collection, 'readwrite' );
+
+			transaction.oncomplete = run;
+			transaction.onerror    = err;
+
+			const store   = transaction.objectStore( collection );
+			const request = store.add( data );
+		});
+	}
+	Update( collection, data ) {
+		return new Promise( ( run, err ) => {
+			const transaction = db.transaction( collection, 'readwrite' );
+
+			transaction.oncomplete = run;
+			transaction.onerror    = err;
+
+			const store   = transaction.objectStore( collection );
+
+			store.put( data );
+		});
+	}
+	Delete( collection, data ) {
+		return new Promise( ( run, err )=>{
+			const transaction = db.transaction( collection, 'readwrite' );
+
+			transaction.oncomplete = run;
+			transaction.onerror    = err;
+
+			const store   = transaction.objectStore( collection );
+
+			store.delete( data );
+		});
+	}
+}

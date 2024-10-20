@@ -35,7 +35,7 @@ class {
 				height          : 0
 				position        : absolute
 				right           : 0
-				transition      : background $!animation, width $!animation
+				transition      : background $!animation, width $!animation, opacity $!animation
 				width           : 5
 				z-index         : 3
 		>.xcont
@@ -52,7 +52,7 @@ class {
 				box-shadow      : 0 0 0 1 $ycont_ybar-shadow
 				height          : 5
 				position        : absolute
-				transition      : background $!animation, height $!animation
+				transition      : background $!animation, height $!animation, opacity $!animation
 				width           : 0
 				z-index         : 3
 		>.hider
@@ -62,9 +62,10 @@ class {
 			width   : 100%
 			z-index : 1
 			>.scroll
-				height  : 100%
-				overflow: scroll
-				width   : 100%
+				box-sizing: initial
+				height    : 100%
+				overflow  : scroll
+				width     : 100%
 	}
 	Style() {/* Estados */
 		&._is_js >.hider >.scroll
@@ -74,18 +75,26 @@ class {
 		&._is_yscroll >.ycont:>display: block
 		&._is_xscroll >.xcont:>display: block
 
-		&._is_down_y >.ycont >.ybar
-			transition: none
-			width     : 10
-		&._is_down_x >.xcont >.xbar
-			transition: none
-			height    : 10
-
 		&._hide_scroll
 			>.hider:>overflow: visible
 				>.scroll
 					overflow: visible
 					padding : 0
+
+		&._soft
+				>.xcont >.xbar:>opacity: .3
+				>.ycont >.ybar:>opacity: .3
+				>.xcont::hover >.xbar:>opacity: 1
+				>.ycont::hover >.ybar:>opacity: 1
+
+		&._is_down_y >.ycont >.ybar
+			opacity   : 1
+			transition: none
+			width     : 10
+		&._is_down_x >.xcont >.xbar
+			height    : 10
+			opacity   : 1
+			transition: none
 
 		>.ycont::hover:>width: 10
 			>.ybar:>width: 10
@@ -111,6 +120,13 @@ class {
 	// front-public
 	get cont  () { return refs.cont }
 	get scroll() { return refs.scroll }
+
+	get soft(     ) { return !!props.soft }
+	set soft( val ) {
+		props.soft = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class( '_soft', props.soft );
+	}
 
 	get html_scroll(     ) { return refs.cont.html }
 	set html_scroll( val ) {

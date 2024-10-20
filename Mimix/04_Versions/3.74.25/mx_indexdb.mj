@@ -1,0 +1,301 @@
+class {
+	// front-private
+	GetInfoDB( db_name ) {
+		return new Promise( ( run, err ) => {
+			const req     = window.indexedDB.open( db_name );
+			req.onsuccess = ( event ) => {
+				const db  = event.target.result;
+				const ver = db.version;
+				const sto = db.objectStoreNames;
+				const res = [];
+
+				for ( const fie of sto ) {
+					res.push( fie );
+				}
+
+				db.close();
+				run({ version:ver, struct:res });
+			};
+			req.onerror   = ( event ) => {
+				err( 'Error al abrir la base de datos' );
+			};
+		});
+	}
+
+	ExecCalls     ( globals         ) {
+		props.calls??= [];
+
+		let   cal;
+		const calls = globals?.calls || props.calls;
+
+		while ( cal=calls.shift() ) {
+			cal.func( ...cal.params, cal.globals ).then( cal.run ).catch( cal.err );
+		}
+	}
+	ConnectIndexDB( params, globals ) {
+		let is_connected   = globals.connected;
+		globals.connected  = false;
+		globals.in_connect = true;
+		globals.struct   ??= {};
+
+		if ( is_connected ) {
+			globals.db.close();
+			globals.db = null;
+		}
+
+		return new Promise( async ( run, err ) => {
+			const { db_name, collections } = params;
+			let   { version, struct }      = await GetInfoDB( db_name );
+			let   is_new_version           = false;
+			const colls                    = globals.struct;
+
+			for ( const col of collections ) {
+				if ( !struct.includes( col.name ) ) is_new_version = true;
+
+				colls[col.name] = { name:col.name };
+
+				if ( typeof col.key=='string' && col.key ) colls[col.name].keyPath       = col.key;
+				if ( col.increment                       ) colls[col.name].autoIncrement = true;
+			}
+
+			if ( is_new_version ) version++;
+
+			let db             = globals.db = window.indexedDB.open( db_name, version );
+			db.onerror         = x => {
+				globals.connected  = false;
+				globals.in_connect = false;
+
+				err( x );
+			};
+			db.onupgradeneeded = x => {
+				db = globals.db = x.target.result;
+
+				for ( const field of Object.values( colls ) ) {
+					if ( db.objectStoreNames.contains( field.name ) ) continue;
+
+					db.createObjectStore( field.name, field );
+				}
+			};
+			db.onsuccess       = x => {
+				db                 = globals.db = x.target.result;
+				globals.connected  = true;
+				globals.in_connect = false;
+
+				run( true );
+				ExecCalls( globals );
+			};
+		});
+	}
+
+	// front-public
+	Connects( params ) {
+		return new Promise(
+			( run, err ) => {
+				if ( Typeof( params )!='object' ) throw new Error( 'Los parametros de creacion no son correctos' );
+
+				const { db_name, collections, is_clear } = params;
+
+				if ( typeof db_name!=='string' || !db_name ) throw new Error( 'El nombre de la base no puede estar vacio'     );
+				if ( !Array.isArray( collections )         ) throw new Error( 'Las colecciones no tienen el formato correcto' );
+
+				window._mx_indexdb_global??= {};
+
+				const glo     = window._mx_indexdb_global;
+				glo[db_name]??= {};
+				const par     = glo[db_name];
+				props.globals = par;
+				par.calls   ??= [];
+
+				if ( par.in_connect ) par.calls.push({ run, err, params:[params], globals:par, func:ConnectIndexDB });
+				else                  ConnectIndexDB( params, par ).then( run ).catch( err );
+			}
+		);
+	}
+	Connect ( params ) {
+		return new Promise( async ( run, err ) => {
+			if ( props.connected ) return run( true );
+
+			let { db_name, collections, version } = params;
+
+			if ( typeof db_name!=='string' || !db_name ) return err( 'falta un nombre de base de datos'   );
+			if ( Typeof( collections )!=='array'       ) return err( 'falta proporcionar las colecciones' );
+
+			version??= 1;
+
+			const colls = {};
+
+			for ( const col of collections ) {
+				colls[col.name] = { name:col.name };
+
+				if ( typeof col.key=='string' && col.key ) colls[col.name].keyPath       = col.key;
+				if ( col.increment                       ) colls[col.name].autoIncrement = true;
+			}
+
+			let db             = props.db = window.indexedDB.open( db_name, version );
+			db.onerror         = x => {
+				props.connected  = false;
+				props.in_connect = false;
+
+				err( x );
+			};
+			db.onupgradeneeded = x => {
+				db = props.db = x.target.result;
+
+				for ( const field of Object.values( colls ) ) {
+					if ( db.objectStoreNames.contains( field.name ) ) continue;
+
+					db.createObjectStore( field.name, field );
+				}
+			};
+			db.onsuccess       = x => {
+				db               = props.db = x.target.result;
+				props.connected  = true;
+				props.in_connect = false;
+
+				run( true );
+				ExecCalls();
+			};
+		});
+	}
+
+	Getter( collection       ) {
+		return new Promise( ( run, err )=>{
+			let transaction;
+
+			if ( props.globals ) {
+				const globals = props.globals;
+
+				if ( !globals.connected ) return globals.calls.push({ func:Getter, params:[collection], run, err });
+
+				transaction = globals.db.transaction( collection, 'readonly' );
+			}
+			else {
+				if ( !props.connected ) return err( 'no esta conectado a la base de datos' );
+
+				transaction = props.db.transaction( collection, 'readonly' );
+			}
+
+			if ( !transaction ) return err( 'error al crear la transaccion' );
+
+			transaction.onerror = err;
+
+			const store   = transaction.objectStore( collection );
+			const request = store.getAll();
+
+			request.onsuccess = () => run( request.result );
+		});
+	}
+	Insert( collection, data ) {
+		return new Promise( ( run, err )=>{
+			let transaction;
+
+			if ( props.globals ) {
+				const globals = props.globals;
+
+				if ( !globals.connected ) return globals.calls.push({ func:Insert, params:[collection, data], run, err });
+
+				transaction = globals.db.transaction( collection, 'readwrite' );
+			}
+			else {
+				if ( !props.connected ) return err( 'no esta conectado a la base de datos' );
+
+				transaction = props.db.transaction( collection, 'readwrite' );
+			}
+
+			if ( !transaction ) return err( 'error al crear la transaccion' );
+
+			transaction.oncomplete = run;
+			transaction.onerror    = err;
+
+			const store = transaction.objectStore( collection );
+
+			if ( Array.isArray( data ) ) data.forEach( v=>store.add( v ) );
+			else                         store.add( data );
+		});
+	}
+	Update( collection, data ) {
+		return new Promise( ( run, err )=>{
+			let transaction;
+
+			if ( props.globals ) {
+				const globals = props.globals;
+
+				if ( !globals.connected ) return globals.calls.push({ func:Update, params:[collection, data], run, err });
+
+				transaction = globals.db.transaction( collection, 'readwrite' );
+			}
+			else {
+				if ( !props.connected ) return err( 'no esta conectado a la base de datos' );
+
+				transaction = props.db.transaction( collection, 'readwrite' );
+			}
+
+			if ( !transaction ) return err( 'error al crear la transaccion' );
+
+			transaction.oncomplete = run;
+			transaction.onerror    = err;
+
+			const store = transaction.objectStore( collection );
+
+			store.put( data );
+		});
+	}
+	Delete( collection, data ) {
+		return new Promise( ( run, err )=>{
+			let transaction;
+
+			if ( props.globals ) {
+				const globals = props.globals;
+
+				if ( !globals.connected ) return globals.calls.push({ func:Delete, params:[collection, data], run, err });
+
+				transaction = globals.db.transaction( collection, 'readwrite' );
+			}
+			else {
+				if ( !props.connected ) return err( 'no esta conectado a la base de datos' );
+
+				transaction = props.db.transaction( collection, 'readwrite' );
+			}
+
+			if ( !transaction ) return err( 'error al crear la transaccion' );
+
+			transaction.oncomplete = run;
+			transaction.onerror    = err;
+
+			const store = transaction.objectStore( collection );
+
+			store.delete( data );
+		});
+	}
+	Clear ( collection       ) {
+		return new Promise( ( run, err )=>{
+			let transaction;
+
+			if ( props.globals ) {
+				const globals = props.globals;
+
+				if ( !globals.connected ) return globals.calls.push({ func:Clear, params:[collection], run, err });
+
+				transaction = globals.db.transaction( collection, 'readwrite' );
+			}
+			else {
+				if ( !props.connected ) return err( 'no esta conectado a la base de datos' );
+
+				transaction = props.db.transaction( collection, 'readwrite' );
+			}
+
+			if ( !transaction ) return err( 'error al crear la transaccion' );
+
+			const store   = transaction.objectStore( collection );
+			const request = store.clear();
+
+			request.onsuccess = (     ) => run( true );
+			request.onerror   = (event) => err( event.target.error );
+		});
+	}
+
+	// front-public
+	Style() {
+		display: none
+	}
+}

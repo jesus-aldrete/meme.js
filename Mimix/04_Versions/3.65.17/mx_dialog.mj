@@ -1,0 +1,112 @@
+class extends HTMLDialogElement:dialog {
+	// front-private
+	timer        = null;
+	run_function = null;
+
+	// front-public
+	View () {
+		& tabindex=0 (keydown)=onKeyDown>{this.body}
+		.back
+	}
+	Style() {/* Tema */
+		@theme-light
+			--mx_dialog--back--back: $back_45
+		@theme-dark
+			--mx_dialog--back--back: $soft_40
+	}
+	Style() {/* Estilos */
+		align-items    : center
+		background     : transparent
+		border         : none
+		display        : none
+		flex-direction : column
+		height         : 100%
+		justify-content: center
+		left           : 0
+		margin         : 0
+		max-height     : none
+		max-width      : none
+		opacity        : .001
+		outline        : none
+		padding        : 0
+		position       : fixed
+		top            : 0
+		transition     : opacity .3s ease-out
+		width          : 100%
+		z-index        : 10
+		::::backdrop
+			background: rgba(0,0,0,0)
+		>.back
+			background: $mx_dialog--back--back
+			height    : 100%
+			left      : 0
+			opacity   : .001
+			position  : absolute
+			top       : 0
+			transition: opacity .3s ease-out
+			width     : 100%
+			z-index   : -1
+	}
+	Style() {/* Estados */
+		&._visible:>display: flex
+		&._animate:>opacity: 1
+			>.back:>opacity: .9
+	}
+
+	// front-public
+	get visible(     ) { return !!props.visible }
+	set visible( val ) {
+		val = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		clearTimeout( timer );
+
+		if ( props.visible=val ) {
+			this.showModal();
+			this.childs.map( v => v?.Play?.() );
+			this.Class( '_visible', true );
+
+			setTimeout( ()=>{
+				this.focus();
+				this.childs.map( v => v?.Focus?.() );
+				this.Class( '_animate', true );
+
+				timer = setTimeout( ()=>{
+					run_function?.();
+					run_function = null;
+				}, 350 );
+			}, 0 );
+		}
+		else {
+			setTimeout( ()=>{ this.Class( '_animate', false ) }, 0 )
+
+			timer = setTimeout( ()=>{
+				this.Class( '_visible', false );
+				this.childs.map( v => v?.Stop?.() );
+				this.close();
+
+				run_function?.();
+				run_function = null;
+			}, 350 );
+		}
+	}
+
+	// front-public
+	Visible( value ) {
+		clearTimeout( timer );
+
+		value??= !this.visible;
+		value  = typeof value==='string' ? !( !value || value.match( /false/i ) ) : !!value;
+
+		return new Promise( ( run ) => {
+			run_function = run;
+			this.visible = value;
+		});
+	}
+
+	// front-private
+	onKeyDown( event ) {
+		if ( event.target!==this || event.key!=='Escape' ) return;
+
+		event.preventDefault();
+	}
+}

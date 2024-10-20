@@ -35,7 +35,9 @@ class {
 	// front-private
 	onNavPush ( _, uri ) {
 		if ( typeof uri==='string' ) {
-			uri = window.location.origin + '/' + uri.replace( /^\//g, '' ) + window.location.search;
+			const urt = new URL( uri );
+
+			uri = window.location.origin + '/' + urt.pathname.replace( /^\//g, '' ) + ( urt.search || window.location.search );
 			uri = new URL( uri );
 		}
 

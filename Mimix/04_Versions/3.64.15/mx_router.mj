@@ -1,0 +1,127 @@
+class {
+	View   () {
+		! \
+			(mx/router/push)   =onNavPush \
+			(mx/router/refresh)=onRefresh \
+			(mx/router/params)       =onParams \
+			(mx/router/params/push)  =onParamsPush \
+			(mx/router/params/update)=onParamsUpdate
+	}
+	Style  () {
+		display: none
+	}
+	Create () {
+		if ( !history.state ) {
+			let res = {};
+
+			for ( const key in window.location ) {
+				if ( typeof window.location[key]==='string' )
+					res[key] = window.location[key];
+			}
+
+			res.count = history.length - 1;
+
+			history.replaceState( res, '', res.href );
+		}
+
+		window.addEventListener( 'popstate', onPopState );
+		this.Trigger( 'mx/router/start', window.location );
+	}
+	Destroy() {
+		window.removeEventListener( 'popstate', onPopState );
+	}
+
+	// front-private
+	onNavPush ( _, uri ) {
+		if ( typeof uri==='string' ) {
+			uri = window.location.origin + '/' + uri.replace( /^\//g, '' ) + window.location.search;
+			uri = new URL( uri );
+		}
+
+		let res = {};
+
+		for ( const key in uri ) {
+			if ( typeof uri[key]==='string' )
+				res[key] = uri[key];
+		}
+
+		history.pushState( res, '', res.href );
+
+		res.count = history.length - 1;
+
+		history.replaceState( res, '', res.href );
+		this.Trigger( 'mx/router/change', uri );
+	}
+	onPopState( event  ) {
+		let { state } = event;
+
+		state??= window.location;
+
+		this.Trigger( 'mx/router/change', state );
+	}
+	onRefresh (        ) {
+		this.Trigger( 'mx/router/change', window.location );
+	}
+
+	onParams      (           ) {
+		let par = window.location.search;
+
+		par = par.slice( 1 ).split( '&' );
+
+		return par.reduce(
+			( r, v ) => {
+				v = v.split( '=' );
+
+				if ( v[0] )
+					r[v[0]] = v[1];
+
+				return r;
+			},
+			{}
+		);
+	}
+	onParamsPush  ( _, params ) {
+		const uri = UpdateParams( params );
+
+		onNavPush( 0, uri );
+	}
+	onParamsUpdate( _, params ) {
+		const uri = UpdateParams( params );
+
+		history.replaceState( uri, '', uri.href );
+	}
+
+	// front-private
+	UpdateParams( params ) {
+		const par = Object.assign( onParams(), params );
+		let   res = '';
+
+		for ( const [key, value] of Object.entries( par ) ) {
+			if ( value===undefined ) continue;
+
+			if ( res ) res+= '&';
+
+			res+= `${key}=${value}`;
+		}
+
+		const uri = {};
+
+		for ( const [key,value] of Object.entries( window.location ) ) {
+			if ( typeof value==='string' ) {
+				uri[key] = value;
+			}
+		}
+
+		if ( uri.search ) {
+			uri.search = '';
+			uri.href   = uri.origin + uri.pathname;
+		}
+
+		if ( res ) {
+			uri.search = '?' + res;
+			uri.href   = uri.origin + uri.pathname + uri.search;
+		}
+
+		return uri;
+	}
+}

@@ -1,0 +1,314 @@
+class {
+	// front-private
+	page    = null;
+	drop    = {};
+	scroll  = { y:{}, x:{} };
+	ticking = false;
+
+	// front-public
+	View () {
+		*ycont (mousedown)=onAreaDownY>[*ybar (mousedown)=onMouseDownY]
+		*xcont (mousedown)=onAreaDownX>[*xbar (mousedown)=onMouseDownX]
+		.hider>[*scroll>[*cont.cont_scroll>{this.body}]]
+	}
+	Style() {/* Temas */
+		@theme-light
+			--mx_scroll__ybar__back  : $high
+			--mx_scroll__ybar__border: $back_20
+		@theme-dark
+			--mx_scroll__ybar__back  : $high
+			--mx_scroll__ybar__border: $back_20
+	}
+	Style() {/* Estilos */
+		position: relative
+		>.ycont
+			display : none
+			height  : 100%
+			position: absolute
+			right   : 0
+			width   : 10
+			z-index : 100
+			>.ybar
+				background-color: $mx_scroll__ybar__back
+				border-radius   : 1000
+				box-shadow      : 0 0 0 1 $mx_scroll__ybar__border
+				height          : 0
+				position        : absolute
+				right           : 0
+				transition      : background $animation, width $animation
+				width           : 5
+				z-index         : 3
+		>.xcont
+			bottom  : 0
+			display : none
+			height  : 10
+			position: absolute
+			width   : 100%
+			z-index : 100
+			>.xbar
+				background-color: $mx_scroll__ybar__back
+				border-radius   : 1000
+				bottom          : 0
+				box-shadow      : 0 0 0 1 $mx_scroll__ybar__border
+				height          : 5
+				position        : absolute
+				transition      : background $animation, height $animation
+				width           : 0
+				z-index         : 3
+		>.hider
+			height  : 100%
+			overflow: hidden
+			position: absolute
+			width   : 100%
+			z-index : 1
+			>.scroll
+				height  : 100%
+				overflow: scroll
+				width   : 100%
+	}
+	Style() {/* Estados */
+		&._is_js >.hider >.scroll
+			padding-bottom: 100
+			padding-right : 100
+
+		&._is_yscroll >.ycont:>display: block
+		&._is_xscroll >.xcont:>display: block
+
+		&._is_down_y >.ycont >.ybar
+			transition: none
+			width     : 10
+		&._is_down_x >.xcont >.xbar
+			transition: none
+			height    : 10
+
+		&._hide_scroll
+			>.hider
+				overflow: visible
+				>.scroll
+					overflow: visible
+					padding : 0
+
+		>.ycont::hover:>width: 10
+			>.ybar:>width: 10
+		>.xcont::hover:>height: 10
+			>.xbar:>height: 10
+	}
+
+	// front-public
+	Create () {
+		this.Class( '_is_js', true );
+
+		props.resize_observer = new ResizeObserver( onResize );
+
+		props.resize_observer.observe( this );
+		props.resize_observer.observe( refs.cont );
+		this.addEventListener( 'scroll', onScroll, { capture:true, passive:true });
+	}
+	Destroy() {
+		this.removeEventListener( 'scroll', onScroll, { capture:true, passive:true });
+		props.resize_observer.disconnect();
+	}
+
+	// front-public
+	get cont  () { return refs.cont }
+	get scroll() { return refs.scroll }
+
+	get html_scroll(     ) { return refs.cont.html }
+	set html_scroll( val ) {
+		refs.cont.html         = val;
+		refs.scroll.scrollTop  = 0;
+		refs.scroll.scrollLeft = 0;
+
+		onResize();
+	}
+
+	get view_scroll(     ) { return !!props.scroll }
+	set view_scroll( val ) {
+		props.scroll = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class( '_hide_scroll', !props.scroll );
+
+		console.log( 99 );
+	}
+
+	// front-private
+	onResize( event ) {
+		clearTimeout( props.timer_resize );
+
+		props.timer_resize = setTimeout(
+			() => {
+				page      = window.location.href;
+				const tpa = parseFloat( refs.scroll.Css( 'padding-top'    ) ) || 0;
+				const bpa = parseFloat( refs.scroll.Css( 'padding-bottom' ) ) || 0;
+				const lpa = parseFloat( refs.scroll.Css( 'padding-left'   ) ) || 0;
+				const rpa = parseFloat( refs.scroll.Css( 'padding-right'  ) ) || 0;
+
+				/*/ ***** Y ***** /*/
+					this.Class( '_is_yscroll', true );
+
+					let scr = refs.ycont.Position().height;
+					let win = Math.round( this.Position().height ) + ( bpa - tpa );
+					let con = refs.scroll.scrollHeight;
+					let bar = ( win * scr ) / con;
+
+					if ( bar<20   ) bar = 20;
+					if ( con<=win ) bar = 0;
+
+					scroll.y.height_bar       = bar;
+					scroll.y.max_position_bar = scr - bar;
+					scroll.y.max_position_con = con - win;
+
+					refs.ybar.style.height  = scroll.y.height_bar + 'px';
+					refs.ybar.style.display = scroll.y.height_bar ? 'block' : 'none';
+
+					this.Class( '_is_yscroll', !!bar );
+
+					if ( scroll.y[page] ) refs.scroll.scrollTop = scroll.y[page];
+				/*/ ***** X ***** /*/
+					this.Class( '_is_xscroll', true );
+
+					scr = refs.xcont.Position().width;
+					win = Math.round( this.Position().width ) + ( rpa - lpa );
+					con = refs.scroll.scrollWidth;
+					bar = ( win * scr ) / con;
+
+					if ( bar<20   ) bar = 20;
+					if ( con<=win ) bar = 0;
+
+					scroll.x.width_bar        = bar;
+					scroll.x.max_position_bar = scr - bar;
+					scroll.x.max_position_con = con - win;
+
+					refs.xbar.style.width   = scroll.x.width_bar + 'px';
+					refs.xbar.style.display = scroll.x.width_bar ? 'block' : 'none';
+
+					this.Class( '_is_xscroll', !!bar );
+
+					if ( scroll.x[page] ) refs.scroll.scrollLeft = scroll.x[page];
+
+				onScroll();
+				this.Trigger( 'resize', { width_bar:scroll.x.width_bar, height_bar:scroll.y.height_bar } );
+			},
+			200
+		);
+	}
+	onScroll( event ) {
+		if ( ticking ) return;
+
+		ticking = true;
+
+		window.requestAnimationFrame(
+			() => {
+				const { scrollTop:top, scrollLeft:left } = refs.scroll;
+				const {
+					y:{ max_position_bar:ybar, max_position_con:ycon },
+					x:{ max_position_bar:xbar, max_position_con:xcon },
+				} = scroll;
+
+				scroll.y[page] = top;
+				scroll.x[page] = left;
+
+				refs.ybar.style.top  = ( ( top  * ybar ) / ycon ) + 'px';
+				refs.xbar.style.left = ( ( left * xbar ) / xcon ) + 'px';
+
+				ticking = false;
+			}
+		);
+	}
+
+	onAreaDownY ( event ) {
+		const { y:{ height_bar:hbar, max_position_bar:pbar, max_position_con:pcon } } = scroll;
+
+		event.preventDefault();
+
+		let y = event.offsetY - ( hbar / 2 );
+
+		if ( y>pbar ) y = pbar;
+		if ( y<0    ) y = 0;
+
+		refs.scroll.scrollTop = ( y * pcon ) / pbar;
+
+		onMouseDownY({ offsetY:hbar / 2 });
+		onScroll();
+	}
+	onMouseDownY( event ) {
+		event.preventDefault?.();
+		event.stopPropagation?.();
+		this.Class( '_is_down_y', true );
+
+		drop.y = {
+			y: event.offsetY,
+			t: refs.scroll.Position( 'off' ).top,
+
+			exit: () => {
+				this.Class( '_is_down_y', false );
+				document.removeEventListener( 'mousemove', onMouseMoveY );
+				document.removeEventListener( 'mouseup'  , onMouseUpY   );
+			},
+		};
+
+		document.addEventListener( 'mousemove', onMouseMoveY );
+		document.addEventListener( 'mouseup'  , onMouseUpY   );
+	}
+	onMouseMoveY( event ) {
+		let y = event.pageY - drop.y.t - drop.y.y;
+
+		if ( y>scroll.y.max_position_bar ) y = scroll.y.max_position_bar;
+		if ( y<0                         ) y = 0;
+
+		refs.scroll.scrollTop = ( y * scroll.y.max_position_con ) / scroll.y.max_position_bar;
+
+		onScroll();
+	}
+	onMouseUpY  ( event ) {
+		drop.y.exit();
+	}
+
+	onAreaDownX ( event ) {
+		const { x:{ width_bar:wbar, max_position_bar:pbar, max_position_con:pcon } } = scroll;
+
+		event.preventDefault();
+
+		let x = event.offsetX - ( wbar / 2 );
+
+		if ( x>pbar ) x = pbar;
+		if ( x<0    ) x = 0;
+
+		refs.scroll.scrollLeft = ( x * pcon ) / pbar;
+
+		onMouseDownX({ offsetX:wbar / 2 });
+		onScroll();
+	}
+	onMouseDownX( event ) {
+		event.preventDefault?.();
+		event.stopPropagation?.();
+		this.Class( '_is_down_x', true );
+
+		drop.x = {
+			x: event.offsetX,
+			l: refs.scroll.Position( 'off' ).left,
+
+			exit: () => {
+				this.Class( '_is_down_x', false );
+				document.removeEventListener( 'mousemove', onMouseMoveX );
+				document.removeEventListener( 'mouseup'  , onMouseUpX   );
+			},
+		};
+
+		document.addEventListener( 'mousemove', onMouseMoveX );
+		document.addEventListener( 'mouseup'  , onMouseUpX   );
+	}
+	onMouseMoveX( event ) {
+		let x = event.pageX - drop.x.l - drop.x.x;
+
+		if ( x>scroll.x.max_position_bar ) x = scroll.x.max_position_bar;
+		if ( x<0                         ) x = 0;
+
+		refs.scroll.scrollLeft = ( x * scroll.x.max_position_con ) / scroll.x.max_position_bar;
+
+		onScroll();
+	}
+	onMouseUpX  ( event ) {
+		drop.x.exit();
+	}
+}

@@ -1,0 +1,243 @@
+class {
+	View () {
+		h1>LOGIN
+
+		mx_oauth_json*json     config={props.config_json   || 'config_json'}
+		mx_oauth_google*google config={props.config_google || 'config_google'}
+		mx_oauth_github*github config={props.config_github || 'config_github'}
+
+		.inputs
+			mx_input*user caption=Usuario                (enter)=onEnterUser (input)=Validate
+			mx_input*pass caption=Password type=password (enter)=onEnterPass (input)=Validate
+
+		.btn_login
+			mx_button*login enabled=false (click)=onClickLogin>LOGIN
+			a>¿Has olvidado tu contraseña?
+
+		.line
+		.btns
+			mx_button (click)=onClickGoogle>[mx_svg variant=duotone icon=google-logo]
+			mx_button (click)=onClickGithub>[mx_svg variant=duotone icon=github-logo]
+		*loader
+	}
+	Style() {
+		@theme-light
+			--mx_login__border                      : $soft_40
+			--mx_login__shadow                      : rgba($_soft_20, .4)
+			--mx_login__line__back                  : $soft_60
+			--mx_login__line_after__back            : $back
+			--mx_login__line_after__border          : $soft_60
+			--mx_login__btns_mx_button__back        : $back_45
+			--mx_login__loader__back                : rgba( $_back_10, .9 )
+			--mx_login__loader_before__border       : $soft_60
+			--mx_login__loader_before__border_bottom: $high
+		@theme-dark
+			--mx_login__border                      : $soft_60
+			--mx_login__shadow                      : rgba($_soft_20, 1)
+			--mx_login__line__back                  : $soft_60
+			--mx_login__line_after__back            : $back_10
+			--mx_login__line_after__border          : $soft_60
+			--mx_login__btns_mx_button__back        : $back
+			--mx_login__loader__back                : rgba( $_soft_10, .9 )
+			--mx_login__loader_before__border       : $soft_60
+			--mx_login__loader_before__border_bottom: $high
+
+		border-radius : 30
+		border        : solid 1 $mx_login__border
+		box-shadow    : 0 0 15 $mx_login__shadow
+		display       : flex
+		flex-direction: column
+		gap           : 40
+		padding       : 40
+		h1
+			font-size: 25
+			margin   : 0
+		>.inputs
+			display       : flex
+			flex-direction: column
+			gap           : 20
+			width         : 300
+		>.btn_login
+			display       : flex
+			flex-direction: column
+			gap           : 10
+			>.mx_button button
+				justify-content: center
+			a
+				cursor    : pointer
+				opacity   : .5
+				text-align: end
+				transition: opacity $animation
+				::hover
+					opacity: 1
+		>.line
+			background-color: $mx_login__line__back
+			height          : 1
+			position        : relative
+			::after
+				background-color: $mx_login__line_after__back
+				border-radius   : 8
+				border          : solid 1 $mx_login__line_after__border
+				content         : 'OR'
+				left            : 50%
+				padding         : 5
+				position        : absolute
+				top             : 50%
+				transform       : translate(-50%,-50%)
+		>.btns
+			display        : flex
+			gap            : 20
+			justify-content: center
+			svg
+				height: 30
+				width : 30
+			>.mx_button button
+				background-color: $mx_login__btns_mx_button__back
+		>.loader
+			background-color: $mx_login__loader__back
+			border-radius   : 30
+			display         : none
+			height          : 100%
+			left            : 0
+			opacity         : 0
+			position        : absolute
+			top             : 0
+			transition      : opacity .3s ease-out
+			width           : 100%
+			z-index         : 3
+			::before
+				border             : 5 solid $mx_login__loader_before__border
+				border-bottom-color: $mx_login__loader_before__border_bottom
+				border-radius      : 50%
+				box-sizing         : border-box
+				content            : ''
+				height             : 30
+				left               : 50%
+				position           : absolute
+				top                : 50%
+				transform          : translate(-50%,-50%)
+				width              : 30
+				z-index            : 4
+
+		&._visible_loader
+			>.loader
+				display: block
+				::before
+					animation: mx_login_rotation 1s linear infinite
+
+		&._animate_loader
+			>.loader
+				opacity: 1
+
+		@keyframes mx_login_rotation
+			0%  :>transform: translate(-50%,-50%) rotate(0deg)
+			100%:>transform: translate(-50%,-50%) rotate(360deg)
+	}
+
+	// public
+	get enabled(     ) { return props.enabled ?? true }
+	set enabled( val ) {
+		val           =
+		props.enabled = typeof val==='string' ? !( !val || !val.match( /false/i ) ) : !!val;
+
+		this.Class( '_disabled', !val );
+
+		refs.user .enabled = val;
+		refs.pass .enabled = val;
+		refs.login.enabled = val;
+	}
+
+	get loader(     ) { return !!props.loader }
+	set loader( val ) {
+		val = typeof val==='string' ? !( !val || val.match( /false/ ) ) : !!val;
+
+		if ( props.visible===val ) return;
+
+		clearTimeout( props.timer );
+
+		if ( props.visible=val ) {
+			this.Class( '_visible_loader', true );
+			setTimeout( ()=>{ this.Class( '_animate_loader', true ) }, 0 );
+		}
+		else {
+			setTimeout( ()=>{ this.Class( '_animate_loader', false ) }, 0 );
+
+			props.timer = setTimeout( ()=>{
+				this.Class( '_visible_loader', false );
+			}, 300 );
+		}
+	}
+
+	// private
+	onEnterUser() {
+		refs.pass.focus();
+	}
+	onEnterPass() {
+		refs.login.focus();
+	}
+
+	async onClickLogin () {
+		const { user, pass } = Validate();
+
+		if ( !user || !pass ) return;
+
+		this.enabled = false;
+		this.loader  = true;
+		const result = await refs.json.Generate( user, pass );
+
+		if ( result.error ) {
+			this.loader  = false;
+			this.enabled = true;
+
+			refs.user.select();
+		}
+
+		this.Trigger( 'login/change', result );
+
+		return result;
+	}
+	async onClickGoogle() {
+		this.enabled = false;
+		this.loader  = true;
+		const result = await refs.google.Generate();
+
+		if ( result.error ) {
+			this.loader  = false;
+			this.enabled = true;
+
+			refs.user.select();
+		}
+
+		this.Trigger( 'login/change', result );
+
+		return result;
+	}
+	async onClickGithub() {
+		this.enabled = false;
+		this.loader  = true;
+		const result = await refs.github.Generate();
+
+		if ( result.error ) {
+			this.loader  = false;
+			this.enabled = true;
+
+			refs.user.select();
+		}
+
+		this.Trigger( 'login/change', result );
+
+		return result;
+	}
+
+	// private
+	Validate() {
+		const {
+			user: { value:user },
+			pass: { value:pass },
+		} = refs;
+
+		refs.login.enabled = !!user && !!pass;
+
+		return { user, pass };
+	}
+}

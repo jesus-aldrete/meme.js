@@ -1,0 +1,11 @@
+{
+	"hosting": {
+		"public": "04_Versions",
+		"ignore": [
+			"**/.*",
+			"**/brand",
+			"**/meme.conf",
+			"**/node_modules/**"
+		]
+	}
+}

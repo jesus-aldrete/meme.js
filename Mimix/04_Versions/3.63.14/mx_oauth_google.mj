@@ -1,0 +1,124 @@
+const {
+	Hash,
+	Fetch,
+	EncodeJWE,
+	EncodeBase64Url,
+	DecodeBase64Url,
+} = require( 'meme:lib' );
+
+class {
+	// public-server
+	static url = 'oauth_google'
+
+	// rest
+	async chang( hash, state, payload ) {
+		if ( state===false ) delete global.states[hash];
+		else {
+			global.states           ??= {};
+			global.states[hash]     ??= {};
+			global.states[hash].state = state;
+
+			if ( payload )
+				global.states[hash].payload = Object.assign( {}, global.states[hash].payload, payload );
+		}
+	}
+	async state( hash                 ) {
+		return global.states?.[hash] ?? {};
+	}
+	async start(                      ) {
+		const { params:{ conf, hash } }                     = this;
+		const { client_id, client_secret, scope, redirect } = this.config.constants[conf] ?? {};
+
+		if ( !client_id || !client_secret || !scope || !redirect ) return 'Error de autenticación';
+
+		const state = EncodeBase64Url( `${conf}:${hash}` );
+
+		return {
+			_code   : 302,
+			_headers: {
+				Location: encodeURI(
+					`https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=${client_id}&redirect_uri=${redirect}&state=${state}&scope=${scope}`
+				),
+			},
+		};
+	}
+	async token(                      ) {
+		let   { code, state, error, error_description }      = this.params;
+		const [conf, hash]                                   = DecodeBase64Url( state ).split( ':' );
+		const { client_id, client_secret, redirect, result } = this.config.constants[conf];
+		let   type, token;
+
+		if ( !client_id || !client_secret || !redirect || !result ) return 'Error de autenticación';
+
+		if ( !error ) {
+			token = await Fetch(
+				'https://oauth2.googleapis.com/token',
+				{ method:'POST', body:`code=${code}&client_id=${client_id}&client_secret=${client_secret}&redirect_uri=${redirect}&grant_type=authorization_code` }
+			);
+			token = token.body;
+
+			if ( typeof token==='string' ) token = JSON.parse( token );
+
+			if ( token.error ) {
+				error             = token.error;
+				error_description = token.error_description;
+			}
+			else {
+				type  = 'ok';
+				token = { ...token, ...{ scope:undefined, token_type:undefined }, ...{ client_id, client_secret, conf, type:'google' } };
+			}
+		}
+
+		if ( error ) {
+			type  = 'error';
+			token = error_description.replace( /\+/gm, ' ' );
+
+			await chang( hash, 'error', { message:token });
+
+			token = btoa( token );
+		}
+		else {
+			token = EncodeJWE( '[[jwe_secret]]', token );
+
+			await chang( hash, 'ok', { result:token } )
+		}
+
+		return {
+			_code   : 302,
+			_headers: {
+				Location: encodeURI(
+					`${result}?type=${type}&page=google&token=${token}&hash=${Hash()}`
+				)
+			}
+		}
+	}
+
+	// public
+	Style() {
+		display: none
+	}
+
+	// public
+	Generate() {return new Promise( async ( run ) => {
+		const hash  = Hash();
+		let   count = 0;
+
+		await chang( hash, 'wait' );
+		window.open( `[[API]]/oauth_google/start?conf=${props.config||props.configuration||''}&hash=${hash}&date=${Hash()}` );
+
+		async function timer() {
+			if ( count++>=300 ) run({ error:'Lo siento, terminó el tiempo de espera y no se pudo resolver la autenticación. Por favor, refresca la aplicación.' });
+			else {
+				const res = await state( hash );
+
+				switch ( res?.state ) {
+					case 'error': run({ error:'Lo siento, el usuario ha denegado el acceso de tu aplicación.' }); break;
+					case 'ok'   : run({ token:res?.payload?.result }); chang( hash, false ); break;
+					default     : setTimeout( timer, 1000 );
+				}
+			}
+		}
+
+		timer();
+	})}
+}

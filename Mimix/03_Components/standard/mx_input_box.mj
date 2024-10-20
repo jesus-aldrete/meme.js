@@ -89,8 +89,7 @@ class {
 		&._focus
 			border-color: $_focus-border
 			>.label
-				background-color: $_focus_label-back
-				opacity         : .3
+				opacity: .3
 			>.sublabel
 				border-color: $_focus_sublabel-border
 				color       : $_focus_sublabel-color
