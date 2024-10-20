@@ -2,7 +2,7 @@
 	"name": "meme-lang",
 	"displayName": "meme.js Languages",
 	"description": "Paquete de lenguajes del sdk meme.js",
-	"version": "5.2.1",
+	"version": "5.4.5",
 	"publisher": "memejs",
 	"icon": "01_Resources/brand/logo.png",
 	"scripts": {

@@ -186,6 +186,7 @@ function IsRegExp( cad, pos ) {
 	switch ( cad[pos] ) {
 		case '=':
 		case ',':
+		case ':':
 		case ';':
 		case '(':
 		case '[':
@@ -291,8 +292,10 @@ function Completion( documents, document_position ) {
 				case com: pos = GetContext( sta, cad, pos, ctx ); break;
 
 				case '/':
-					if      ( IsComment( cad, pos ) ) pos = GetComment( cad, pos );
-					else if ( IsRegExp ( cad, pos ) ) pos = GetRegExp ( cad, pos );
+					if ( end!=='"' && end!=='`' && end!=="'" ) {
+						if      ( IsComment( cad, pos ) ) pos = GetComment( cad, pos );
+						else if ( IsRegExp ( cad, pos ) ) pos = GetRegExp ( cad, pos );
+					}
 				break;
 
 				case '$': if ( end==='`' && cad[pos+1]==='{' ) pos = GetContext( sta, cad, pos + 1, cxJs ); break;
