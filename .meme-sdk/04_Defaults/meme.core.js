@@ -231,12 +231,12 @@ SVGSVGElement.prototype.Position = HTMLElement.prototype.Position = function( si
 
 	return this;
 };
-SVGSVGElement.prototype.Focus = HTMLElement.prototype.Focus = function() {
+SVGSVGElement.prototype.Focus = HTMLElement.prototype.Focus = function( time=0 ) {
 	setTimeout(
 		()=>{
 			this.focus();
 		},
-		0
+		time
 	);
 
 	return this;

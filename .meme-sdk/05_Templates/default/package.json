@@ -9,6 +9,6 @@
 	},
 	"license": "ISC",
 	"dependencies": {
-		"meme-sdk": "^3.0.0"
+		"meme-sdk": "^5.33.47"
 	}
 }

@@ -726,14 +726,15 @@ async function Load( project ) {
 			.constructor( 'require', 'require_meme', code )
 			.call(
 				{
-					urls          : URLS          ,
-					files         : FILES         ,
-					config        : CONFIG        ,
-					driver        : DRIVER        ,
-					compilers     : TRANSPILERS   ,
-					modified_files: MODIFIED_FILES,
-					hash_load     ,
-					...params     ,
+					urls            : URLS          ,
+					files           : FILES         ,
+					config          : CONFIG        ,
+					driver          : DRIVER        ,
+					compilers       : TRANSPILERS   ,
+					modified_files  : MODIFIED_FILES,
+					compile_function: Compile       ,
+					hash_load       ,
+					...params       ,
 				},
 				require,
 				require_meme
@@ -1568,6 +1569,31 @@ async function Build( project ) {
 
 	DRIVER.Trigger( 'project/build/end', { id:ID, type:'app' } );
 }
+async function Get( url ) {
+	const safe_stringify = obj => {
+		const seen = new Set();
+
+		return JSON.stringify(
+			obj,
+			( _, value ) => {
+				if ( typeof value==='object' && value!==null ) {
+					if ( seen.has( value ) ) {
+						return;
+					}
+
+					seen.add( value );
+				}
+
+				return value;
+			}
+		);
+	};
+
+	const file = URLS[url];
+	const str  = safe_stringify( file );
+
+	return JSON.parse( str );
+}
 // ####################################################################################################
 
 
@@ -1620,6 +1646,7 @@ function Inicio() {
 		DRIVER.Events ( 'project/connect' , Connect               );
 		DRIVER.Events ( 'project/load'    , Load                  );
 		DRIVER.Events ( 'project/build'   , Build                 );
+		DRIVER.Events ( 'project/app/get' , Get                   );
 		DRIVER.Trigger( 'project/init/end', { id:ID, type:'app' } );
 	};return Inicio();
 };       Inicio();
