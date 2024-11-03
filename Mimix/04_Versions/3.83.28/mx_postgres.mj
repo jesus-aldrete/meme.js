@@ -1,0 +1,103 @@
+/* Declaraciones */
+let id_client  = 0;
+let is_connect = false;
+// ####################################################################################################
+
+
+/* Metodos */
+async function Connect( params ) {
+	if ( is_connect ) return true;
+
+	await driver.Connect( params );
+
+	id_client = await driver.Trigger( 'CirroMatic/postgres/connect', params );
+
+	if ( id_client==null || id_client.error ) {
+		console.Error( id_client.error                                );
+		console.Error( 'no se pudo conectar con el servidor postgres' );
+		console.trace();
+
+		return is_connect=false;
+	}
+
+	( params.view_log ?? true ) && console.Info( `bg[fw[ postgres ]] fm[conectado]` );
+
+	return is_connect=true;
+}
+
+async function Sql( sql, params ) {
+	if ( !sql || typeof sql!=='string' ) {
+		console.Error( 'Falta agregar una consulta sql' );
+		return null;
+	}
+
+	if ( params && !Array.isArray( params ) ) {
+		console.Error( 'Los parametros deben ser un arreglo' );
+		return null;
+	}
+
+	return await driver.Trigger( 'CirroMatic/postgres/sql', { sql, params, id:id_client } );
+}
+
+async function Insert( params ) {
+	if ( !( params instanceof Object ) ) params = {};
+
+	const { table, values } = params;
+
+	if ( !table || typeof table!=='string' ) {
+		console.Error( 'Falta agregar una tabla' );
+		return null;
+	}
+
+	if ( !( values instanceof Object ) || !Object.keys( values ).length ) {
+		console.Error( 'Falta agregar un objeto "values" con los valores a insertar' );
+		return null;
+	}
+
+	return await driver.Trigger( 'CirroMatic/postgres/insert', { table, values } );
+}
+async function Update( params ) {
+	if ( !( params instanceof Object ) ) params = {};
+
+	const { table, values, where } = params;
+
+	if ( !table || typeof table!=='string' ) {
+		console.Error( 'Falta agregar una tabla' );
+		return null;
+	}
+
+	if ( !( values instanceof Object ) || !Object.keys( values ).length ) {
+		console.Error( 'Falta agregar un objeto "values" con los valores a insertar' );
+		return null;
+	}
+
+	if ( where && typeof where!=='string' ) {
+		console.Error( 'Falta agregar una tabla' );
+		return null;
+	}
+
+	return await driver.Trigger( 'CirroMatic/postgres/update', { table, values, where } );
+}
+async function Delete( params ) {
+	if ( !( params instanceof Object ) ) params = {};
+
+	const { table, where } = params;
+
+	if ( !table || typeof table!=='string' ) {
+		console.Error( 'Falta agregar una tabla' );
+		return null;
+	}
+
+	if ( where && typeof where!=='string' ) {
+		console.Error( 'Falta agregar una tabla' );
+		return null;
+	}
+
+	return await driver.Trigger( 'CirroMatic/postgres/delete', { table, where });
+}
+// ####################################################################################################
+
+
+/* Exportaciones */
+module.exports = { Connect, Sql, Insert, Update, Delete };
+// ####################################################################################################

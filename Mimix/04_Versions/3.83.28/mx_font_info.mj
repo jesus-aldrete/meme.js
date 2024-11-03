@@ -1,0 +1,558 @@
+/* Declaraciones */
+const cxTTF  = 1;
+const cxOTF  = 2;
+const cxWOFF = 3;
+// ####################################################################################################
+
+
+/* Funciones */
+function GetTag( data, offset  ) {
+	let tag = '';
+
+	for ( let i = offset; i<( offset + 4 ); i+= 1 ) {
+		tag+= String.fromCharCode( data.getInt8( i ) );
+	}
+
+	return tag;
+}
+function Parse ( data, context ) {
+	/* Declaraciones */
+	const utf_16                 = 'utf-16';
+	const name_table_names       = [
+		'copyright'                 ,
+		'font_family'               ,
+		'font_sub_family'           ,
+		'unique_id'                 ,
+		'full_name'                 ,
+		'version'                   ,
+		'post_script_name'          ,
+		'trademark'                 ,
+		'manufacturer'              ,
+		'designer'                  ,
+		'description'               ,
+		'manufacturer_url'          ,
+		'designer_url'              ,
+		'license'                   ,
+		'license_url'               ,
+		'reserved'                  ,
+		'preferred_family'          ,
+		'preferred_subfamily'       ,
+		'compatible_full_name'      ,
+		'sample_text'               ,
+		'post_script_find_font_name',
+		'wws_family'                ,
+		'wws_subfamily'             ,
+	];
+	const mac_language_encodings = {
+		15 : 'x-mac-icelandic',
+		17 : 'x-mac-turkish'  ,
+		18 : 'x-mac-croatian' ,
+		24 : 'x-mac-ce'       ,
+		25 : 'x-mac-ce'       ,
+		26 : 'x-mac-ce'       ,
+		27 : 'x-mac-ce'       ,
+		28 : 'x-mac-ce'       ,
+		30 : 'x-mac-icelandic',
+		37 : 'x-mac-romanian' ,
+		38 : 'x-mac-ce'       ,
+		39 : 'x-mac-ce'       ,
+		40 : 'x-mac-ce'       ,
+		143: 'x-mac-inuit'    ,
+		146: 'x-mac-gaelic'   ,
+	};
+	const mac_script_encodings   = {
+		0 : 'macintosh'        ,
+		1 : 'x-mac-japanese'   ,
+		2 : 'x-mac-chinesetrad',
+		3 : 'x-mac-korean'     ,
+		6 : 'x-mac-greek'      ,
+		7 : 'x-mac-cyrillic'   ,
+		9 : 'x-mac-devanagai'  ,
+		10: 'x-mac-gurmukhi'   ,
+		11: 'x-mac-gujarati'   ,
+		12: 'x-mac-oriya'      ,
+		13: 'x-mac-bengali'    ,
+		14: 'x-mac-tamil'      ,
+		15: 'x-mac-telugu'     ,
+		16: 'x-mac-kannada'    ,
+		17: 'x-mac-malayalam'  ,
+		18: 'x-mac-sinhalese'  ,
+		19: 'x-mac-burmese'    ,
+		20: 'x-mac-khmer'      ,
+		21: 'x-mac-thai'       ,
+		22: 'x-mac-lao'        ,
+		23: 'x-mac-georgian'   ,
+		24: 'x-mac-armenian'   ,
+		25: 'x-mac-chinesesimp',
+		26: 'x-mac-tibetan'    ,
+		27: 'x-mac-mongolian'  ,
+		28: 'x-mac-ethiopic'   ,
+		29: 'x-mac-ce'         ,
+		30: 'x-mac-vietnamese' ,
+		31: 'x-mac-extarabic'  ,
+	};
+	// **************************************************
+
+	/* Funciones */
+	function UShort( parser ) {
+		const v                = parser.data.getUint16( parser.offset + parser.relative_offset );
+		parser.relative_offset+= 2;
+
+		return v;
+	}
+
+	function UncompressTable( data, table_entry ) {
+		/* Declaraciones */
+		const result_ok   = 0;
+		const lengths     = new Uint8Array ( 288 + 32                                                           );
+		const clcidx      = new Uint8Array ([ 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 ]);
+		const offs        = new Uint16Array( 16                                                                 );
+		const length_bits = new Uint8Array ( 30                                                                 );
+		const length_base = new Uint16Array( 30                                                                 );
+		const dist_bits   = new Uint8Array ( 30                                                                 );
+		const dist_base   = new Uint16Array( 30                                                                 );
+		const code_tree   = { table:new Uint16Array( 16 ), trans:new Uint16Array( 288 ) };
+		const sltree      = { table:new Uint16Array( 16 ), trans:new Uint16Array( 288 ) };
+		const sdtree      = { table:new Uint16Array( 16 ), trans:new Uint16Array( 288 ) };
+		// **************************************************
+
+		/* Funciones */
+		function FixedTrees( ltree, dtree              ) {
+			for ( let i = 0; i<7; i++ ) ltree.table[i] = 0;
+
+			ltree.table[7] = 24;
+			ltree.table[8] = 152;
+			ltree.table[9] = 112;
+
+			for ( let i = 0; i<24 ; i++ ) ltree.trans[i               ] = 256 + i;
+			for ( let i = 0; i<144; i++ ) ltree.trans[24 + i          ] = i;
+			for ( let i = 0; i<8  ; i++ ) ltree.trans[24 + 144 + i    ] = 280 + i;
+			for ( let i = 0; i<112; i++ ) ltree.trans[24 + 144 + 8 + i] = 144 + i;
+			for ( let i = 0; i<5  ; i++ ) dtree.table[i               ] = 0;
+
+			dtree.table[5] = 32;
+
+			for ( let i = 0; i<32; i++ ) dtree.trans[i] = i;
+		}
+		function BitsBase  ( bits , base, delta, first ) {
+			for ( let i = 0; i<delta         ; i++ ) bits[i        ] = 0;
+			for ( let i = 0; i<( 30 - delta ); i++ ) bits[i + delta] = i / delta | 0;
+
+			for ( let sum = first, i = 0; i<30; i++ ) {
+				base[i] = sum;
+				sum    += 1 << bits[i];
+			}
+		}
+
+		function GetBit      ( data                       ) {
+			if ( !data.bitcount-- ) {
+				data.tag      = data.source[data.source_index++];
+				data.bitcount = 7;
+			}
+
+			const bit = data.tag & 1;
+
+			data.tag>>>= 1;
+
+			return bit;
+		}
+		function ReadBits    ( data  , numb, base         ) {
+			if ( !numb ) return base;
+
+			while ( data.bitcount<24 ) {
+				data.tag     |= data.source[data.source_index++] << data.bitcount;
+				data.bitcount+= 8;
+			}
+
+			const val = data.tag & ( 0xffff>>>( 16 - numb ) );
+
+			data.tag   >>>= numb;
+			data.bitcount-= numb;
+
+			return val + base;
+		}
+		function InflateBlock( data                       ) {
+			while ( data.bitcount>8 ) {
+				data.source_index--;
+				data.bitcount    -= 8;
+			}
+
+			const
+			length = data.source[data.source_index + 1];
+			length = 256 * length + data.source[data.source_index];
+
+			const
+			inv_length = data.source[data.source_index + 3];
+			inv_length = 256 * inv_length + data.source[data.source_index + 2];
+
+			if ( length!==( ~inv_length & 0x0000ffff ) ) return result_error;
+
+			data.source_index+= 4;
+
+			for ( let i = length; i--; ) {
+				data.dest[data.dest_length++] = data.source[data.source_index++];
+			}
+
+			data.bitcount = 0;
+
+			return result_ok;
+		}
+		function BuildTree   ( tree  , lengths, off, numb ) {
+			for ( let i = 0; i<16  ; i++ ) tree.table[i               ] = 0;
+			for ( let i = 0; i<numb; i++ ) tree.table[lengths[off + i]]++;
+
+			tree.table[0] = 0;
+
+			for ( let sum = 0, i = 0; i<16; i++ ) {
+				offs[i] = sum;
+				sum    += tree.table[i];
+			}
+
+			for ( let i = 0; i<numb; i++ ) {
+				if ( lengths[off + i] ) {
+					tree.trans[offs[lengths[off + i]]++] = i;
+				}
+			}
+		}
+		function DecodeSymbol( data  , tree               ) {
+			while ( data.bitcount<24 ) {
+				data.tag     |= data.source[data.source_index++] << data.bitcount;
+				data.bitcount+= 8;
+			}
+
+			let
+			sum = 0,
+			cur = 0,
+			len = 0,
+			tag = data.tag
+			;
+
+			do {
+				cur   = 2 * cur + ( tag & 1 );
+				tag>>>= 1;
+
+				sum+= tree.table[++len];
+				cur-= tree.table[  len];
+			}
+			while ( cur>=0 );
+
+			data.tag      = tag;
+			data.bitcount-= len;
+
+			return tree.trans[sum + cur];
+		}
+		function DecodeTrees ( data  , ltree, dtree       ) {
+			const hlit  = ReadBits( data, 5, 257 );
+			const hdist = ReadBits( data, 5, 1   );
+			const hclen = ReadBits( data, 4, 4   );
+
+			for ( let i = 0; i<19   ; i++ ) lengths[i        ] = 0;
+			for ( let i = 0; i<hclen; i++ ) lengths[clcidx[i]] = ReadBits( data, 3, 0 );
+
+			BuildTree( code_tree, lengths, 0, 19 );
+
+			for ( let num = 0; num<( hlit + hdist ); ) {
+				const sym = DecodeSymbol( data, code_tree );
+
+				switch ( sym ) {
+					case 16:
+						const prev = lengths[num - 1];
+
+						for ( let i = ReadBits( data, 2, 3 ); i--; ) {
+							lengths[num++] = prev;
+						}
+					break;
+
+					case 17:
+						for ( let i = ReadBits( data, 3, 3 ); i--; ) {
+							lengths[num++] = 0;
+						}
+					break;
+
+					case 18:
+						for ( let i = ReadBits( data, 7, 11 ); i--; ) {
+							lengths[num++] = 0;
+						}
+					break;
+
+					default: lengths[num++] = sym;
+				}
+			}
+
+			BuildTree( ltree, lengths, 0   , hlit  );
+			BuildTree( dtree, lengths, hlit, hdist );
+		}
+		function BlockData   ( data  , ltree, dtree       ) {
+			while ( 1 ) {
+				let sym = DecodeSymbol( data, ltree );
+
+				if ( sym===256 ) return result_ok;
+
+				if ( sym<256 ) {
+					data.dest[data.dest_length++] = sym;
+				}
+				else {
+					sym         -= 257;
+					const length = ReadBits    ( data, length_bits[sym], length_base[sym] );
+					const dist   = DecodeSymbol( data, dtree );
+					const offs   = data.dest_length - ReadBits( data, dist_bits[dist], dist_base[dist] );
+
+					for ( let i = offs; i<( offs + length ); i++ ) {
+						data.dest[data.dest_length++] = data.dest[i];
+					}
+				}
+			}
+		}
+		function Block       ( source, dest               ) {
+			let   bfinal, result;
+			const data = {
+				dest        ,
+				source      ,
+				tag         : 0,
+				ltree       : { table:new Uint16Array( 16 ), trans:new Uint16Array( 288 ) },
+				dtree       : { table:new Uint16Array( 16 ), trans:new Uint16Array( 288 ) },
+				bitcount    : 0,
+				dest_length : 0,
+				source_index: 0,
+			};
+
+			do {
+				bfinal = GetBit( data );
+
+				switch ( ReadBits( data, 2, 0 ) ) {
+					case 0: result = InflateBlock( data                 ); break;
+					case 1: result = BlockData   ( data, sltree, sdtree ); break;
+					case 2:
+						DecodeTrees( data, data.ltree, data.dtree );
+
+						result = BlockData( data, data.ltree, data.dtree );
+					break;
+
+					default: result = result_error;
+				}
+
+				if ( result!==result_ok ) throw new Error( 'Data error' );
+			}
+			while ( !bfinal );
+
+			if ( data.dest_length<data.dest.length ) {
+				if ( typeof data.dest.slice==='function' ) return data.dest.slice   ( 0, data.dest_length );
+				else                                       return data.dest.subarray( 0, data.dest_length );
+			}
+
+			return data.dest;
+		}
+		// **************************************************
+
+		function Inicio() {
+			if ( !table_entry.compression ) return { data, offset:table_entry.offset };
+
+			const in_buffer  = new Uint8Array( data.buffer, table_entry.offset + 2, table_entry.compressed_length - 2 );
+			const out_buffer = new Uint8Array( table_entry.length );
+
+			FixedTrees( sltree     , sdtree            );
+			BitsBase  ( length_bits, length_base, 4, 3 );
+			BitsBase  ( dist_bits  , dist_base  , 2, 1 );
+
+			length_bits[28] = 0;
+			length_base[28] = 258;
+
+			Block( in_buffer, out_buffer );
+
+			if ( out_buffer.byteLength!==table_entry.length ) throw new Error( 'Decompression error: ' + table_entry.tag + ' decompressed length doesn\'t match recorded length' );
+
+			return {
+				data  : new DataView( out_buffer.buffer, 0 ),
+				offset: 0,
+			};
+		};return Inicio();
+	}
+
+	function GetEntriesTTF ( data       , numb_tables                        ) {
+		const table_entries = [];
+		let   offset        = 12;
+
+		for ( let i = 0; i<numb_tables; i++ ) {
+			table_entries.push(
+				{
+					tag     : GetTag( data, offset ),
+					checksum: data.getUint32( offset + 4 , false ),
+					offset  : data.getUint32( offset + 8 , false ),
+					length  : data.getUint32( offset + 12, false ),
+				}
+			);
+
+			offset+= 16;
+		}
+
+		return table_entries;
+	}
+	function GetEntriesWOFF( data       , numb_tables                        ) {
+		const table_entries = [];
+		let   offset        = 44;
+
+		for ( let i = 0; i<numb_tables; i++ ) {
+			const compressed_length = data.getUint32( offset + 8 , false );
+			const length            = data.getUint32( offset + 12, false );
+
+			table_entries.push({
+				length           ,
+				compressed_length,
+				compression      : compressed_length<length ? 'WOFF' : false,
+				offset           : data.getUint32( offset + 4 , false ),
+				tag              : GetTag( data, offset ),
+			});
+
+			offset+= 20;
+		}
+
+		return table_entries;
+	}
+	function GetEncoding   ( platform_id, encoding_id, language_id           ) {
+		switch ( platform_id ) {
+			case 0: return utf_16;
+			case 1: return mac_language_encodings[language_id] || mac_script_encodings[encoding_id];
+			case 3: if ( encoding_id===1 || encoding_id===10 ) return utf_16;
+		}
+	}
+	function GetString     ( data       , offset     , length     , encoding ) {
+		if ( encoding===utf_16 ) {
+			const code_points = [];
+			const numb_chars  = length / 2;
+
+			for ( let i = 0; i<numb_chars; i++, offset+= 2 ) {
+				code_points[i] = data.getUint16( offset );
+			}
+
+			return String.fromCharCode.apply( null, code_points );
+		}
+
+		const eight_bit_mac_encodings = {
+			'x-mac-croatian':  // Python: 'mac_croatian'
+			'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®Š™´¨≠ŽØ∞±≤≥∆µ∂∑∏š∫ªºΩžø' +
+			'¿¡¬√ƒ≈Ć«Č… ÀÃÕŒœĐ—“”‘’÷◊©⁄€‹›Æ»–·‚„‰ÂćÁčÈÍÎÏÌÓÔđÒÚÛÙıˆ˜¯πË˚¸Êæˇ',
+			'x-mac-cyrillic':  // Python: 'mac_cyrillic'
+			'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ†°Ґ£§•¶І®©™Ђђ≠Ѓѓ∞±≤≥іµґЈЄєЇїЉљЊњ' +
+			'јЅ¬√ƒ≈∆«»… ЋћЌќѕ–—“”‘’÷„ЎўЏџ№Ёёяабвгдежзийклмнопрстуфхцчшщъыьэю',
+			'x-mac-gaelic': // http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/GAELIC.TXT
+			'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØḂ±≤≥ḃĊċḊḋḞḟĠġṀæø' +
+			'ṁṖṗɼƒſṠ«»… ÀÃÕŒœ–—“”‘’ṡẛÿŸṪ€‹›Ŷŷṫ·Ỳỳ⁊ÂÊÁËÈÍÎÏÌÓÔ♣ÒÚÛÙıÝýŴŵẄẅẀẁẂẃ',
+			'x-mac-greek':  // Python: 'mac_greek'
+			'Ä¹²É³ÖÜ΅àâä΄¨çéèêë£™îï•½‰ôö¦€ùûü†ΓΔΘΛΞΠß®©ΣΪ§≠°·Α±≤≥¥ΒΕΖΗΙΚΜΦΫΨΩ' +
+			'άΝ¬ΟΡ≈Τ«»… ΥΧΆΈœ–―“”‘’÷ΉΊΌΎέήίόΏύαβψδεφγηιξκλμνοπώρστθωςχυζϊϋΐΰ\u00AD',
+			'x-mac-icelandic':  // Python: 'mac_iceland'
+			'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûüÝ°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø' +
+			'¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€ÐðÞþý·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ',
+			'x-mac-inuit': // http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/INUIT.TXT
+			'ᐃᐄᐅᐆᐊᐋᐱᐲᐳᐴᐸᐹᑉᑎᑏᑐᑑᑕᑖᑦᑭᑮᑯᑰᑲᑳᒃᒋᒌᒍᒎᒐᒑ°ᒡᒥᒦ•¶ᒧ®©™ᒨᒪᒫᒻᓂᓃᓄᓅᓇᓈᓐᓯᓰᓱᓲᓴᓵᔅᓕᓖᓗ' +
+			'ᓘᓚᓛᓪᔨᔩᔪᔫᔭ… ᔮᔾᕕᕖᕗ–—“”‘’ᕘᕙᕚᕝᕆᕇᕈᕉᕋᕌᕐᕿᖀᖁᖂᖃᖄᖅᖏᖐᖑᖒᖓᖔᖕᙱᙲᙳᙴᙵᙶᖖᖠᖡᖢᖣᖤᖥᖦᕼŁł',
+			'x-mac-ce':  // Python: 'mac_latin2'
+			'ÄĀāÉĄÖÜáąČäčĆćéŹźĎíďĒēĖóėôöõúĚěü†°Ę£§•¶ß®©™ę¨≠ģĮįĪ≤≥īĶ∂∑łĻļĽľĹĺŅ' +
+			'ņŃ¬√ńŇ∆«»… ňŐÕőŌ–—“”‘’÷◊ōŔŕŘ‹›řŖŗŠ‚„šŚśÁŤťÍŽžŪÓÔūŮÚůŰűŲųÝýķŻŁżĢˇ',
+			macintosh:  // Python: 'mac_roman'
+			'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø' +
+			'¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ',
+			'x-mac-romanian':  // Python: 'mac_romanian'
+			'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ĂȘ∞±≤≥¥µ∂∑∏π∫ªºΩăș' +
+			'¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›Țț‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ',
+			'x-mac-turkish':  // Python: 'mac_turkish'
+			'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø' +
+			'¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸĞğİıŞş‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙˆ˜¯˘˙˚¸˝˛ˇ'
+		};
+		const table                   = eight_bit_mac_encodings[encoding];
+
+		if ( !table ) return;
+
+		let result = '';
+
+		for ( let i = 0; i<length; i++ ) {
+			const char = data.getUint8( offset + i );
+
+			if ( char<=0x7F ) result+= String.fromCharCode( char );
+			else              result+= table[char & 0x7F];
+		}
+
+		return result;
+	}
+	function GetMeta       ( data       , offset_name, os2_entrie , os2_data ) {
+		const result        = {};
+		const parser        = { data, offset:offset_name, relative_offset:2 };
+		const count         = UShort( parser );
+		const string_offset = parser.offset + UShort( parser );
+
+		for ( let i = 0; i<count; i++ ) {
+			const platform_id = UShort     ( parser                                );
+			const encoding_id = UShort     ( parser                                );
+			const language_id = UShort     ( parser                                );
+			const name_id     = UShort     ( parser                                );
+			const byte_length = UShort     ( parser                                );
+			const offset      = UShort     ( parser                                );
+			const encoding    = GetEncoding( platform_id, encoding_id, language_id );
+			const property    = name_table_names[name_id] || name_id;
+
+			if ( encoding ) {
+				result[property] = GetString( data, string_offset + offset, byte_length, encoding );
+			}
+		}
+
+		os2_data      = new DataView( ( os2_data || data ).buffer, os2_entrie.offset, os2_entrie.length );
+		result.weight = os2_data.getUint16( 4, false );
+
+		return result;
+	}
+	// **************************************************
+
+	function Inicio() {
+		let number_tables, name_entrie, os2_entrie, uncompress_table, uncompress_table_os2;
+
+		switch ( context ) {
+			case cxTTF:
+				number_tables    = data.getUint16( 4, false );
+				uncompress_table = GetEntriesTTF( data, number_tables );
+				os2_entrie       = uncompress_table.find( v => v.tag==='OS/2' );
+				name_entrie      = uncompress_table.find( v => v.tag==='name' );
+			return GetMeta( data, name_entrie.offset, os2_entrie );
+
+			case cxOTF:
+				number_tables    = data.getUint16( 4, false );
+				uncompress_table = GetEntriesTTF( data, number_tables );
+				os2_entrie       = uncompress_table.find( v => v.tag==='OS/2' );
+				name_entrie      = uncompress_table.find( v => v.tag==='name' );
+			return GetMeta( data, name_entrie.offset, os2_entrie );
+
+			case cxWOFF:
+				number_tables        = data.getUint16( 12, false           );
+				uncompress_table     = GetEntriesWOFF( data, number_tables );
+				os2_entrie           = uncompress_table.find( v => v.tag==='OS/2' );
+				name_entrie          = uncompress_table.find( v => v.tag==='name' );
+				uncompress_table     = UncompressTable( data, name_entrie );
+				uncompress_table_os2 = UncompressTable( data, os2_entrie  );
+			return GetMeta(
+				uncompress_table.data,
+				uncompress_table.offset,
+				{ offset:uncompress_table_os2.offset, length:os2_entrie.length },
+				uncompress_table_os2.data
+			);
+		}
+	};return Inicio();
+}
+// ####################################################################################################
+
+
+/* Exportaciones */
+module.exports = function( buffer ) {
+	const array = new ArrayBuffer( buffer.length );
+	const view  = new Uint8Array ( array         );
+
+	for ( let i = 0; i<buffer.length; i++ ) view[i] = buffer[i];
+
+	const
+	data      = new DataView( array, 0 ),
+	signature = GetTag( data, 0 );
+
+	if      ( signature===String.fromCharCode( 0, 1, 0, 0 ) || signature==='true' || signature==='typ1' ) return Parse( data, cxTTF  );
+	else if ( signature==='OTTO'                                                                        ) return Parse( data, cxOTF  );
+	else if ( signature==='wOFF'                                                                        ) return Parse( data, cxWOFF );
+	else                                                                                                  throw new Error( 'Unsupported OpenType signature ' + signature );
+};
+// ####################################################################################################

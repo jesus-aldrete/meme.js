@@ -1,0 +1,69 @@
+/* Declaraciones */
+let id_connection = null;
+let is_connect    = false;
+let collection    = null;
+// ####################################################################################################
+
+
+/* Metodos */
+async function Connect( params ) {
+	if ( is_connect ) return true;
+
+	is_connect = true;
+	collection = null;
+
+	await driver.Connect( params );
+
+	id_connection = await driver.Trigger( 'CirroMatic/mongo/connect', params );
+
+	if ( id_connection==null ) {
+		console.Error( 'no se pudo conectar con el servidor mongo' );
+
+		return is_connect=false;
+	}
+
+	collection = params.collection || params.mongo?.collection;
+
+	params.view_log && console.Info( `bg[fw[ Mongo ]] fm[conectado]` );
+
+	return true;
+}
+
+async function Getter( params ) {
+	if ( !(params instanceof Object) || Array.isArray( params ) ) return { error:'los parametros de la funcion debe ser un objeto' };
+	if (  collection && !params.collection                      ) params.collection = collection;
+
+	params.id = id_connection;
+
+	return await driver.Trigger( 'CirroMatic/mongo/getter', params );
+}
+async function Insert( params ) {
+	if ( typeof params!=='object'         ) params            = {};
+	if ( collection && !params.collection ) params.collection = collection;
+
+	params.id = id_connection;
+
+	return await driver.Trigger( 'CirroMatic/mongo/insert', params );
+}
+async function Update( params ) {
+	if ( typeof params!=='object'         ) params            = {};
+	if ( collection && !params.collection ) params.collection = collection;
+
+	params.id = id_connection;
+
+	return await driver.Trigger( 'CirroMatic/mongo/update', params );
+}
+async function Delete( params ) {
+	if ( typeof params!=='object'         ) params            = {};
+	if ( collection && !params.collection ) params.collection = collection;
+
+	params.id = id_connection;
+
+	return await driver.Trigger( 'CirroMatic/mongo/delete', params );
+}
+// ####################################################################################################
+
+
+/* Exportaciones */
+module.exports = { Connect, Getter, Insert, Update, Delete };
+// ####################################################################################################

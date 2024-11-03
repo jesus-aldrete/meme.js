@@ -1,0 +1,77 @@
+const {
+	DecodeBase64Url,
+	EncodeJWE,
+	DecodeJWE,
+	Typeof,
+	FetchBigJSON,
+	Sleep,
+} = require( 'meme:lib' );
+
+class {
+	// configuration
+	static version = '0.0.1';
+	static url     = 'oauth_json';
+
+	// back-tcp
+	async IsToken ( token ) {
+		return !!( token && DecodeJWE( '[[jwe_secret]]', token ) )
+	}
+	async GetToken( token ) {
+		const [conf, user, pass] = DecodeBase64Url( token ).split( ':' );
+
+		if ( !conf || !user || !pass ) { await Sleep( 2000 ); return }
+
+		const config = this.config.constants[conf] || {};
+		const mongo  = require( 'meme:mx_mongo' )( config );
+		let   result = await mongo.Getter({ collection:'users', filter:{ user } });
+
+		if ( Typeof( result )!=='array' || result.length!==1 ) {
+			await Sleep( 2000 );
+			return;
+		}
+
+		const { laps, date, pass:value } = result[0];
+		result                           = await FetchBigJSON( config.url, '/crypto', 'POST', { user, pass, laps, date, value } );
+
+		if ( !result.autenticate ) return;
+
+		return EncodeJWE( '[[jwe_secret]]', { conf, user, type:'json' } );
+	}
+
+	// front-public
+	Style() {
+		display: none
+	}
+
+	// front-public
+	get configuration(     ) { return props.configuration ?? '' }
+	set configuration( val ) { props.configuration = String( val ) }
+
+	// front-public
+	async Validate( token      ) {
+		return await IsToken( token );
+	}
+	async Generate( user, pass ) {
+		if ( typeof user!=='string' ) user = '';
+		if ( typeof pass!=='string' ) pass = '';
+
+		const token = await GetToken( EncodeBase64Url( `${props.config}:${user}:${pass}` ) );
+
+		return {
+			token,
+			error: !token ? 'Lo siento, la autenticación ha fallado.' : undefined,
+			func : 'generate',
+			type : 'json',
+		};
+	}
+
+	// front-private
+	EncodeBase64Url( data ) {
+		data = btoa( data )
+		.replace ( /=/g , ''  )
+		.replace ( /\+/g, '-' )
+		.replace ( /\//g, '_' )
+
+		return data.slice( 2 ) + data.slice( 0, 2 )
+	}
+}
