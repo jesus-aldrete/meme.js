@@ -571,8 +571,12 @@ async function Load( project ) {
 			for ( const ofile of Object.values( files ) ) {
 				let oold_file = FILES[ofile.path];
 
-				if      ( !oold_file                             ) changs.add   .push( ofile );
-				else if (  oold_file.data_hash!==ofile.data_hash ) changs.modify.push( ofile );
+				if ( !oold_file ) {
+					if ( !ofile.data.match( /module\.exports/gm ) ) {
+						changs.add.push( ofile );
+					}
+				}
+				else if ( oold_file.data_hash!==ofile.data_hash ) changs.modify.push( ofile );
 			}
 
 			for ( const ofile of Object.values( WATCHERS ) ) {
