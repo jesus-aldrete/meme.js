@@ -1,0 +1,94 @@
+class {
+	// front-private
+	async Login  () {
+		this.Trigger( 'mx/auth/logout' );
+
+		const fom = props.login_form || 'mx_login_form';
+
+		try {
+			await import( `[[APP]]/${fom}.js` );
+
+			refs.cont.html = `<${fom.replaceAll( '_', '-' )}/>`;
+		}
+		catch ( e ) {
+			console.error( 'no existe el componente de "login"' );
+			console.error( e );
+		}
+	}
+	async Default() {
+		if ( await this.Trigger( 'mx/auth/valid' )===true ) {
+			let fom = props.main_form;
+
+			if ( !fom ) {
+				fom = 'mx_login_form_ok';
+
+				console.error( 'no existe el componente de "main form"' );
+			}
+
+			try {
+				await import( `[[APP]]/${fom}.js` );
+
+				refs.cont.html = `<${fom.replaceAll( '_', '-' )}/>`;
+			}
+			catch ( e ) {
+				console.error( 'no existe el componente de "main"' );
+				console.error( e );
+			}
+		}
+		else this.Trigger( 'mx/router/push', 'login' );
+	}
+
+	// front-public
+	Tag  () {
+		const log = this.urls['/mx_login.js'];
+
+		if ( !log ) return;
+
+		delete log.imports['mx_login_form'];
+		delete log.imports['mx_login_form_ok'];
+	}
+	View () {
+		! (mx/router/change)=Create
+
+		require component=mx_login_form
+		require component=mx_login_form_ok
+
+		mx_auth type={props.type} db_type={props.db_type} config={props.config}
+		mx_router
+		mx_toast
+		mx_loader
+
+		*cont
+	}
+	Style() {
+		>.cont
+			height  : 100%
+			left    : 0
+			overflow: hidden
+			position: absolute
+			top     : 0
+			width   : 100%
+	}
+
+	// front-private
+	async Create( _, uri=window.location ) {
+		this.Trigger( 'mx/loader', true, 'iniciando...' );
+
+		let   page = '';
+		const path = uri.pathname.toLowerCase().split( '/' );
+
+		switch ( path[1] ) {
+			case 'login': page = 'login'; break;
+			default     : page = 'main' ; break;
+		}
+
+		if ( props.page===page ) return this.Trigger( 'mx/loader', false );
+
+		switch ( props.page=page ) {
+			case 'login': await Login  (); break;
+			default     : await Default(); break;
+		}
+
+		this.Trigger( 'mx/loader', false );
+	}
+}

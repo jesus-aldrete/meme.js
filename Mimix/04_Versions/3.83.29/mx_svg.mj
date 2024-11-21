@@ -1,0 +1,199 @@
+class {
+	// configuration
+	static version = '0.0.1';
+
+	// front-private
+	icons = {};
+
+	// front-public
+	Load  () {
+		/* Declaraciones */
+		const { ParsePath, Fetch }                                      = require( 'meme:lib' );
+		const { file, config, all_elements_groups:{ mx_svg:elements } } = this;
+		const cache_file                                                = ParsePath( [[work_space]].path, 'icon.meme.cache' );
+		let   cache;
+		// **************************************************
+
+		/* Get */
+		async function GetCount(                ) {
+			const count = {};
+
+			for ( const element of ( elements||[] ) ) {
+				let { icon, variant, loaded } = element.params;
+
+				if ( loaded ) {
+					const PointerFromReference = ( value )=>{ loaded = value };
+
+					eval( '`'+ loaded +'`' );
+
+					for ( const load of loaded ) count[load] = 2;
+				}
+				else {
+					if ( variant ) icon = variant + ':' + icon;
+
+					count[icon]??= 0;
+					count[icon]++;
+				}
+			}
+
+			return count;
+		}
+		async function GetSvg  ( icon, variant  ) {
+			if ( icon==='undefined'        ) return [];
+			if ( typeof icon   !=='string' ) icon    = '';
+			if ( typeof variant!=='string' ) variant = '';
+
+			let name = ( variant || 'regular' ) + ':' + icon;
+
+			if ( cache[icon] ) return cache[icon];
+			if ( cache[name] ) return cache[name];
+
+			/*/ ***** Local ***** /*/
+			if ( !variant ) {
+				const ofiles = [];
+				const rex    = new RegExp( `\\/${icon}\\.svg$`, 'i' );
+
+				for ( const osource of config.res.sources ) {
+					ofiles.push(
+						...osource.Travel({ filter:[rex], ignore:config.res.ignore })
+					);
+				}
+
+				if ( ofiles.length ) return [icon, ofiles[0].Read()];
+			}
+
+			/*/ ***** Url ***** /*/
+			if ( icon.match( /\:/gm ) ) {
+				icon    = icon.split( ':' );
+				variant = icon[0];
+				icon    = icon[1];
+			}
+
+			if ( !icon    ) return [];
+			if ( !variant ) variant = 'regular';
+
+			name         = variant + ':' + icon;
+			const url    = `https://raw.githubusercontent.com/jesus-aldrete/phosphor-icons/main/raw/${variant}/${icon}.svg`;
+			const result = await Fetch( url );
+
+			if ( !result.ok ) {
+				console.Error( `cd[No se encontro el icono:] fy[${icon}]cd[, con la variante:] fy[${variant}]cd[, url: fc[${url}]]` );
+				return [];
+			}
+
+			console.Info( `cd[Download icon:] fc[${url}]` );
+
+			return cache[name] = [name,result.body];
+		}
+		async function GetOne  ( element        ) {
+			const { params:{ icon, variant } } = element;
+
+			if ( !icon ) return;
+
+			const [,svg] = await GetSvg( icon, variant );
+
+			if ( !svg ) return;
+
+			element.body        = svg;
+			element.not_require = true;
+
+			if ( element.params.style!=='' )
+				element.params.style = 'display:block;';
+
+			delete element.params.svg;
+		}
+		async function GetMore ( element, icons ) {
+			const { params:{ icon, variant } } = element;
+
+			if ( !icon ) return;
+
+			const [name,svg] = await GetSvg( icon, variant );
+
+			if ( !svg ) return;
+
+			icons[name]          = svg;
+			element.params.svg   = name;
+
+			if ( element.params.style!=='' )
+				element.params.style = 'display:block;';
+
+			delete element.body;
+			delete element.not_require;
+		}
+		async function GetDown ( icon   , icons ) {
+			if ( typeof icon!=='string' || !icon ) return;
+
+			let variant = '';
+
+			if ( icon.match( /\:/gm ) ) {
+				icon    = icon.split( ':' );
+				variant = icon[0];
+				icon    = icon[1];
+			}
+
+			if ( !icon ) return;
+
+			const [name,svg] = await GetSvg( icon, variant );
+			icons[name]      = svg;
+		}
+		// **************************************************
+
+		/* Inicio */
+		async function Inicio() {
+			if ( cache_file.type==='file' ) {
+				try   { cache = JSON.parse( cache_file.Read() ) }
+				catch { cache = {} }
+			}
+			else cache = {};
+
+			const icons  = Object.assign( {}, global._bs_svg_cache_icons );
+			const counts = await GetCount();
+
+			for ( const element of elements ) {
+				let { icon, variant } = element.params;
+
+				if ( variant ) icon = variant + ':' + icon;
+
+				switch ( counts[icon] ) {
+					case null     :
+					case undefined: continue;
+					case 1        : await GetOne ( element        ); break;
+					default       : await GetMore( element, icons ); break;
+				}
+			}
+
+			for ( const [icon,count] of Object.entries( counts ) ) {
+				if ( count<2     ) continue;
+				if ( icons[icon] ) continue;
+
+				await GetDown( icon, icons );
+			}
+
+			if ( Object.keys( icons ).length ) file.struct.variables.icons.value = JSON.stringify( icons );
+
+			const str = JSON.stringify( cache, 0, '\t' );
+
+			if ( str!==cache_file.data ) cache_file.Write( str );
+		};await        Inicio();
+		// **************************************************
+	}
+	View  () {
+		&>{ this.body }
+	}
+	Create() {
+		window.icons = icons;
+	}
+
+	// front-public
+	get svg(     ) { return props.svg }
+	set svg( val ) {
+		const svg = icons[val];
+
+		if ( !svg ) return;
+
+		props.svg = val;
+		this.html = svg;
+
+		this.Atts( 'icon', val );
+	}
+}

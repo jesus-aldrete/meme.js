@@ -1,0 +1,77 @@
+class extends mx_dialog {
+	// front-private
+	counts = 0;
+
+	// front-public
+	View  () {
+		! (mx/loader)=onLoader
+		&
+			mx_svg*icon icon=duotone:spinner-ball
+			li*list
+	}
+	Style () {/* Tema */
+		@theme-light
+			--icon-color        : $!back_10
+			--list_ul_after-back: $!high
+		@theme-dark
+			--icon-color: $!back
+	}
+	Style () {
+		.icon
+			color : $icon-color
+			height: 50
+			width : 50
+		.list
+			display       : flex
+			flex-direction: column
+			gap           : 5
+			margin-top    : 20
+			>ul
+				margin      : 0
+				padding-left: calc(8px + 5px)
+				position    : relative
+				::after
+					background-color: $list_ul_after-back
+					content         : ''
+					height          : 3
+					left            : 0
+					position        : absolute
+					top             : 50%
+					transform       : translateY(-50%)
+					width           : 8
+	}
+	Style () {/* Estados */
+		&._play .icon:>animation: spin 2s linear infinite
+	}
+	Style () {/* Animacion */
+		@keyframes spin
+			0%  :>transform: rotate(0deg)
+			100%:>transform: rotate(360deg)
+	}
+	Create() {
+		refs.icon.Play = onPlay;
+		refs.icon.Stop = onStop;
+	}
+
+	// front-private
+	onPlay  (                  ) {
+		this.Class( '_play', true );
+	}
+	onStop  (                  ) {
+		refs.list.html = '';
+
+		this.Class( '_play', false );
+	}
+	onLoader( _, is_view, text ) {
+		if ( is_view ) counts++;
+		else           counts--;
+
+		if ( counts<0 ) counts = 0;
+
+		if ( text ) {
+			refs.list.Add({mh ul>{text} });
+		}
+
+		this.visible = counts>0;
+	}
+}

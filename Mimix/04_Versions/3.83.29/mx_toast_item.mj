@@ -1,0 +1,198 @@
+class {
+	// configuration
+	static version = '0.0.3'
+
+	// front-public
+	View () {
+		&.{props.title ? '_has_title' : ''}._{props.type} (transitionend)=onEnd
+
+		mx_svg*icon.fill loaded={*[
+			'fill:bell'        ,
+			'fill:warning'     ,
+			'fill:check-circle',
+			'fill:info'        ,
+		]}
+		.cont_texts
+			h2.title>{props.title}
+			p.message>{props.message}
+		.cont_button
+			.cont_close
+				button.btn*time (click)=onTime>08
+				button.btn.close (click)=onClose>[mx_svg.icon icon=fill:x]
+			button.btn*extra
+	}
+	Style() {/* Tema */
+		@theme-light
+			--shadow                               : rgba(0,0,0,.2)
+			--cont_text_title-color                : black
+			--cont_texts_message-color             : $!back_10|#2e2e2e
+			--cont_button_cont_close_btn-color     : $!back_10|#2e2e2e
+			--cont_button_cont_close_btn_icon-color: #DB3232
+
+			--_type_info-back   : #cfe3ee
+			--_type_info-border : #52b8f2
+			--_type_warn-back   : #fae9d4
+			--_type_warn-border : #fe9f43
+			--_type_check-border: #0bc46d
+			--_type_error-back  : #f9d1d0
+			--_type_error-border: #f37a70
+		@theme-dark
+			--shadow                               : rgba(255,255,255,.1)
+			--cont_text_title-color                : white
+			--cont_texts_message-color             : $!back|#e8e8e8
+			--cont_button_cont_close_btn-color     : $!back|#e8e8e8
+			--cont_button_cont_close_btn_icon-color: #DB3232
+
+			--_type_info-back   : #38464F
+			--_type_info-border : #4F9ECB
+			--_type_warn-back   : #48433C
+			--_type_warn-border : #D68A3F
+			--_type_check-border: #0D9354
+			--_type_error-back  : #423434
+			--_type_error-border: #BD5D55
+	}
+	Style() {/* Estilos */
+		align-items   : center
+		border        : solid 1 transparent
+		border-radius : 5 0 0 5
+		border-right  : none
+		box-shadow    : 0 0 10 $shadow
+		display       : flex
+		gap           : 10
+		max-width     : 500
+		pointer-events: all
+		pointer-events: all
+		transform     : translateX(110%)
+		transition    : transform .7s ease-out, opacity .5s ease-out, margin-top .5s ease-out
+		>.fill
+			height: 40
+			width : 40
+			margin: 10 0 10 10
+		>.cont_texts
+			display       : flex
+			flex-direction: column
+			gap           : 10
+			margin        : 10 0
+			>.title
+				color      : $cont_text_title-color
+				display    : none
+				font-size  : 18
+				font-weight: bold
+				margin     : 0
+			>.message
+				color : $cont_texts_message-color
+				margin: 0
+		>.cont_button
+			align-self    : normal
+			border-color  : inherit
+			display       : flex
+			flex-direction: column
+			>.cont_close
+				border-color: inherit
+				display     : flex
+				flex        : 1
+				>.btn
+					background-color: transparent
+					border          : none
+					border-bottom   : solid 1
+					border-left     : solid 1
+					border-color    : inherit
+					color           : $cont_button_cont_close_btn-color
+					>.icon
+						color : $cont_button_cont_close_btn_icon-color
+						height: 20
+						width : 20
+			>.btn
+				background-color : transparent
+				border           : none
+				border-color     : inherit
+				border-left-style: solid
+				border-left-width: 1
+				flex             : 1
+
+		&._type_info :>border-color:$_type_info-border ;background-color:$_type_info-back:> .icon:>color: $_type_info-border
+		&._type_warn :>border-color:$_type_warn-border ;background-color:$_type_warn-back:> .icon:>color: $_type_warn-border
+		&._type_check:>border-color:$_type_check-border;background-color:$_type_check-back:>.icon:>color: $_type_check-border
+		&._type_error:>border-color:$_type_error-border;background-color:$_type_error-back:>.icon:>color: $_type_error-border
+
+		&._visible:>transform: translateX(0)
+
+		&._has_title >.cont_texts >.title:>display: block
+	}
+
+	// front-public
+	Create() {
+		setTimeout( ()=>{
+			this.Class( '_visible', true );
+		}, 50 );
+	}
+
+	// front-public
+	get time(     ) { return props.time }
+	set time( val ) {
+		if ( typeof val!=='number' ) val = parseInt( val ) || 8;
+
+		clearTimeout( props.time_out );
+
+		props.time     = val;
+		refs.time.html = String( props.time ).padStart( 2, '0' );
+
+		if ( !props.ya_meazure ) Meazure( val );
+
+		if ( props.time<=0 ) onClose();
+		else                 props.time_out = setTimeout( ()=>this.time--, 1000 );
+	}
+
+	get type(     ) { return props.type ?? 'info' }
+	set type( val ) {
+		switch ( val ) {
+			case 'ok'   :
+			case 'check': props.type = 'check'; refs.icon.html = icons['fill:check-circle']; break;
+			case 'warn' : props.type = 'warn' ; refs.icon.html = icons['fill:bell'        ]; break;
+			case 'error': props.type = 'error'; refs.icon.html = icons['fill:warning'     ]; break;
+			default     : props.type = 'info' ; refs.icon.html = icons['fill:info'        ]; break;
+		}
+
+		this.Class( /_type_/               , false );
+		this.Class( `_type_${ props.type }`, true  );
+	}
+
+	// front-private
+	onEnd   ( event ) {
+		if ( props.is_close && event.propertyName==='opacity' && event.target===this ) {
+			this.Remove();
+		}
+	}
+	onTime  (       ) {
+		this.time+= 5;
+	}
+	onClose (       ) {
+		props.is_close = true;
+
+		this.Css( 'margin-top', -this.Position().height - 20 );
+		this.Css( 'opacity'   , 0 );
+	}
+	onRetime(       ) {
+		this.time+= 5;
+	}
+
+	// front-private
+	Meazure( time ) {
+		props.ya_meazure    = true;
+		const style         = window.getComputedStyle( refs.time );
+		const font          = style.fontSize + ' ' + style.fontFamily;
+		const canvas        = document.createElement( 'canvas' );
+		const ctx           = canvas.getContext( '2d' );
+		ctx.font            = font;
+		const width_letter  = ctx.measureText( '0' );
+		const margin_left   = parseFloat( style.marginLeft   ) || 0;
+		const margin_right  = parseFloat( style.marginRight  ) || 0;
+		const padding_left  = parseFloat( style.paddingLeft  ) || 0;
+		const padding_right = parseFloat( style.paddingRight ) || 0;
+		let   time_length   = time.toString().length || 1;
+
+		if ( time_length<2 ) time_length = 2;
+
+		refs.time.Css({ minWidth:( ( width_letter.width * time_length ) + padding_left + margin_left + padding_right + margin_right ) + 'px' });
+	}
+}

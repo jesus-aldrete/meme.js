@@ -1,0 +1,238 @@
+class {
+	Tag() {
+		/* Declaraciones */
+		const { config                  } = this;
+		const { ParsePath, FetchBigJSON } = require( 'meme:lib'          );
+		const FontInfo                    = require( 'meme:mx_font_info' );
+		const cache                       = Cache();
+
+		/* Cache */
+		function Cache() {
+			/* Declaraciones */
+			let   cache      = {};
+			const cache_path = config.constants.work_space.path + '/fonts.meme.cache';
+
+			/* Metodos */
+			function Load() {
+				const ofile = ParsePath( cache_path );
+
+				if ( ofile.type!=='file' ) return {};
+
+				try {
+					const json = JSON.parse( ofile.Read() );
+
+					for ( const font of Object.values( json ) ) {
+						font.data = Buffer.from( font.data, 'base64' );
+					}
+
+					return json;
+				}
+				catch( e ) {
+					console.Error( `cd[mx_fonts:Load:LoadCache]: ${e.message}` );
+					console.trace();
+
+					return {};
+				}
+			}
+			function Save() {
+				const cac = {};
+
+				for ( const key in cache ) {
+					cac[key] = Object.assign( {}, cache[key] );
+
+					if ( cac[key].data ) {
+						cac[key].data = cac[key].data.toString( 'base64' );
+					}
+				}
+
+				const ofile = ParsePath( cache_path );
+
+				ofile.Write( JSON.stringify( cac, 0, '\t' ) );
+			}
+			function Get () {
+				return cache;
+			}
+
+			/* Inicio */
+			function Inicio() {
+				if ( global._mx_font_info_cache ) return global._mx_font_info_cache;
+
+				cache = Load();
+
+				return global._mx_font_info_cache = { Load, Save, Get };
+			};return Inicio();
+		}
+
+		/* Funciones */
+		async function GetFonts(       ) {
+			const fonts  = {};
+			const ofiles = [];
+
+			for ( const source of config.res.sources ) {
+				source.Travel({
+					filter: [/\.(otf|ttf|woff2?)$/i],
+					ignore: config.res.ignore,
+					call  : ( ofile ) => {
+						ofile.url = ofile.path.replace( source.path, '' );
+
+						ofiles.push( ofile );
+					},
+				});
+			}
+
+			for ( const ofile of ofiles ) {
+				ofile.Read( false );
+
+				let info;
+
+				if ( ofile.ext==='.woff2' ) info = await driver.Trigger( 'CirroMatic/font/info', { format:'.woff2', buffer:ofile.data.toString( 'base64' ) } );
+				else                        info = FontInfo( ofile.data );
+
+				if ( !info?.full_name ) continue;
+
+				const name = info.full_name;
+				ofile.info = info;
+
+				switch ( ofile.ext ) {
+					case '.woff' : ofile.woff  = ofile; break;
+					case '.woff2': ofile.woff2 = ofile; break;
+				}
+
+				if ( !fonts[name] ) {
+					fonts[name] = ofile;
+					continue;
+				}
+
+				const ofont = fonts[name];
+
+				switch ( ofile.ext ) {
+					case '.ttf':
+					case '.otf':
+						ofile.woff  = ofont.woff;
+						ofile.woff2 = ofont.woff2;
+						fonts[name] = ofile;
+					break;
+
+					case '.woff':
+						if ( ofont.ext==='.woff2' ) {
+							ofile.woff2 = ofont;
+							fonts[name] = ofile;
+						}
+						else fonts[name].woff = ofile;
+					break;
+
+					case '.woff2':
+						fonts[name].woff2 = ofile;
+					break;
+				}
+			}
+
+			return fonts;
+		}
+		async function GetProcs( fonts ) {
+			let   iss = false;
+			const cac = cache.Get();
+
+			for ( const font of Object.values( fonts ) ) {
+				if ( font.woff && font.woff2 ) continue;
+
+				const formats = [];
+
+				if ( !font.woff ) {
+					if ( cac[font.info.full_name+'woff'] ) {
+						font.woff = cac[font.info.full_name+'woff'];
+
+						if ( font.woff2 ) continue;
+					}
+					else formats.push( 'woff' );
+				}
+
+				if ( !font.woff2 ) {
+					if ( cac[font.info.full_name+'woff2'] ) {
+						font.woff2 = cac[font.info.full_name+'woff2'];
+
+						if ( font.woff ) continue;
+					}
+					else formats.push( 'woff2' );
+				}
+
+				console.Info( `fm[Transformando fuente:] ${font.info.full_name}, fm[formatos:] [${formats.join( ', ' )}]` );
+
+				const res = await driver.Trigger( 'CirroMatic/font/convert', { formats, format:font.ext, buffer:font.data.toString( 'base64' ) } );
+
+				for ( const [format, buffer] of Object.entries( res ) ) {
+					iss                  = true;
+					const new_font       = font[format] = ParsePath( font.path );
+					const rex            = new RegExp( `\\${font.ext}$`, 'i' );
+					new_font.base        = font.base.replace( rex, '.' + format );
+					new_font.ext         = '.' + format;
+					new_font.path        = font.path.replace( rex, '.' + format );
+					new_font.data        = Buffer.from( buffer, 'base64' );
+					new_font.is_generate = true;
+
+					cac[font.info.full_name+format] = new_font;
+				}
+			}
+
+			iss && cache.Save();
+		}
+		async function GetStyle( fonts ) {
+			let res = '';
+
+			for ( const font of Object.values( fonts ) ) {
+				const family    = font.info.preferred_family || font.info.font_family;
+				const weight    = font.info.weight===400 ? 'normal' : ( font.info.weight===700 ? 'bold' : font.info.weight );
+				const subfamily = ( font.info.preferred_subfamily || font.info.font_sub_family ).match( /italic/i ) ? 'italic' : 'normal';
+				const url_woff  = `[[RES]]${ font.woff .url || `/${font.woff .base}` }`;
+				const url_woff2 = `[[RES]]${ font.woff2.url || `/${font.woff2.base}` }`;
+
+				res+= (
+					'@font-face {'+
+						'font-display:swap;'+
+						`font-family:'${family}';`+
+						`font-weight:${weight};`+
+						`font-style:${subfamily};`+
+						`src:url('${url_woff2}') format('woff2'), url('${url_woff}') format('woff');`+
+					'}'+
+				'\n');
+			}
+
+			return res;
+		}
+
+		async function SendRes( fonts ) {
+			const formats = ['woff', 'woff2'];
+			const files   = [];
+
+			for ( const font of Object.values( fonts ) ) {
+				if ( !font.woff.is_generate && !font.woff2.is_generate ) continue;
+
+				for ( const format of formats ) {
+					if ( !font[format].is_generate ) continue;
+					const copy = Object.assign( {}, font[format] );
+					copy.data  = { type:'base64', buffer:copy.data.toString( 'base64' ) };
+
+					files.push( copy );
+				}
+			}
+
+			await driver.Trigger( 'project/res/add', { files } );
+		}
+
+		/* Inicio */
+		async function Inicio() {
+			const conet = await driver.Connect( '[[token_matic]]' );
+			const fonts = await GetFonts();
+
+			await GetProcs( fonts );
+			await SendRes ( fonts );
+
+			const styles = await GetStyle( fonts );
+
+			return {
+				code   : `<style>${styles}</style>`,
+				require: false,
+			};
+		};return await Inicio();
+	}
+}

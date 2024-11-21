@@ -1,0 +1,65 @@
+class {
+	// configuration
+	static version = '0.0.1'
+
+	// front-public
+	View () {
+		! (mx/toast)=onNew
+	}
+	Style() {
+		align-items   : flex-end
+		background    : rgba(0,0,0,0)
+		border        : none
+		display       : flex
+		flex-direction: column
+		gap           : 20
+		height        : calc(100% - 40px)
+		left          : auto
+		pointer-events: none
+		position      : fixed
+		right         : 0
+		top           : 40
+		z-index       : 11
+	}
+
+	// front-private
+	onNew( _, type, message, code, time ) {
+		New( type, message, code, time );
+	}
+
+	// front-public
+	New( type, message, code, time, title ) {
+		if ( !type ) return;
+
+		if ( typeof type==='object' ) {
+			if      ( type.error   ) { type.type = 'error'; type.message = type.error   }
+			else if ( type.info    ) { type.type = 'info' ; type.message = type.info    }
+			else if ( type.warn    ) { type.type = 'warn' ; type.message = type.warn    }
+			else if ( type.warning ) { type.type = 'warn' ; type.message = type.warning }
+			else if ( type.check   ) { type.type = 'check'; type.message = type.check   }
+			else if ( type.ok      ) { type.type = 'check'; type.message = type.ok      }
+
+			message = String( type.message );
+			title   = type.title;
+			code    = type.code;
+			time    = type.time;
+			type    = type.type;
+		}
+
+		type   ??= 'info';
+		title  ??= '';
+		message??= '';
+		code   ??= '';
+		time   ??= 8;
+		message  = message.replace( /\"/gm, '&quot;' );
+
+		this.Add({mh
+			mx_toast_item \
+				type   ={ type }\
+				code   ={ code }\
+				time   ={ time }\
+				title  ={ title }\
+				message={ message }\
+		});
+	}
+}

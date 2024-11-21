@@ -1,0 +1,69 @@
+class {
+	Style() {
+		display: none
+	}
+
+	// front-public
+	LoadFile(                  ) {
+		let timer;
+
+		let
+		input                = document.createElement( 'input' );
+		input.type           = 'file';
+		input.style.position = 'absolute';
+		input.style.opacity  = '0';
+		input.style.width    = '0';
+		input.style.height   = '0';
+
+		return new Promise( ( run ) => {
+			const resolve_file = ( result ) => {
+				document.body.removeEventListener( 'mousemove', movem_window );
+				window       .removeEventListener( 'focus'    , focus_window );
+
+				if ( resolve_file.is_resolve ) return;
+
+				resolve_file.is_resolve = true;
+
+				input.parentNode.removeChild( input );
+				run( result );
+			};
+			const focus_window = (      ) => {
+				document.body.addEventListener   ( 'mousemove', movem_window );
+				window       .removeEventListener( 'focus'    , focus_window );
+
+				setTimeout( resolve_file, 300, null );
+			};
+			const movem_window = (      ) => {
+				document.body.removeEventListener( 'mousemove', movem_window );
+				window       .removeEventListener( 'focus'    , focus_window );
+
+				setTimeout( resolve_file, 300, null );
+			};
+			const change_file  = (      ) => {
+				const file         = input.files[0];
+				const file_reader  = new FileReader();
+				file_reader.onload = async ( result ) => resolve_file( result.target.result );
+
+				file_reader.readAsText( file, 'UTF-8' );
+			};
+
+			input.addEventListener( 'change', change_file );
+			document.body.appendChild( input );
+
+			setTimeout( _ => {
+				input.click();
+				window.addEventListener( 'focus', focus_window );
+			}, 0);
+		});
+	}
+	SaveFile( name, type, data ) {
+		const link     = document.createElement( 'a' );
+		link.download  = name;
+		link.innerHTML = 'Download File';
+		link.href      = window.URL.createObjectURL(
+			new Blob( [data], {type} )
+		);
+
+		link.click();
+	}
+}

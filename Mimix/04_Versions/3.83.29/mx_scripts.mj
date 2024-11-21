@@ -1,0 +1,55 @@
+class {
+	// configuration
+	static version = '0.0.1';
+	static require = false;
+
+	// front-public
+	Tag() {
+		/* Declaraciones */
+		let {
+			files    ,
+			config   ,
+			element  ,
+			compilers,
+			props    : {
+				refresh =[[debug]],
+				core    ,
+				animate ,
+				protocol,
+			}
+		} = this;
+		// **************************************************
+
+		/* Funciones */
+		function IsProtocol() {
+			for ( const file of Object.values( files ) ) {
+				if ( !file.struct?.is_server_class ) continue;
+
+				return true;
+			}
+		}
+		// **************************************************
+
+		/* Inicio */
+		function Inicio() {
+			refresh  = typeof refresh ==='string' ? !( !refresh  || refresh .match( /false/i ) ) : !!  refresh;
+			core     = typeof core    ==='string' ? !( !core     || core    .match( /false/i ) ) : !!  core   ;
+			animate  = typeof animate ==='string' ? !( !animate  || animate .match( /false/i ) ) : !!  animate;
+			protocol = typeof protocol==='string' ? !( !protocol || protocol.match( /false/i ) ) : !!( protocol ?? IsProtocol() );
+
+			core===true && compilers.Configure({ include_core:false });
+
+			if ( !config.constants.debug ) {
+				refresh = false;
+			}
+
+			return (
+				( refresh  ? {mh script src="[[APP]]/meme.refresh.js" }  : '' ) +
+				( core     ? {mh script src="[[APP]]/meme.core.js"    }  : '' ) +
+				( animate  ? {mh script src="[[APP]]/meme.animate.js" }  : '' ) +
+				( protocol ? {mh script src="[[APP]]/meme.protocol.js"}  : '' )
+			);
+		};return Inicio();
+		// **************************************************
+	}
+}
