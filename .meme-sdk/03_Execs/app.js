@@ -692,11 +692,15 @@ async function Load( project ) {
 			);
 		};return Inicio();
 	}
+	function RequireMeme( lib ) {
+		return FILES[`meme:${lib}`]?.exports;
+	}
 
-	async function RequireMeme( lib ) {
+	async function RequireMemeBuild( lib ) {
 		const oparse = await cache.Get( lib );
 		const url    = `meme:${lib}`;
 
+		if ( !oparse               ) return null;
 		if (  FILES[url]?.exports  ) return FILES[url].exports;
 		if (  oparse.type!=='file' ) return null;
 		if (  oparse.exports       ) return oparse.exports;
@@ -723,8 +727,6 @@ async function Load( project ) {
 		return null;
 	}
 	async function ExecScripts( code, params, ofile ) {
-		code = code.replace( /require_meme/gm, 'await require_meme' );
-
 		try {
 			return await Object.getPrototypeOf( async function() {} )
 			.constructor( 'require', 'require_meme', code )
@@ -802,7 +804,11 @@ async function Load( project ) {
 				group.body = code;
 			}
 		}
-
+		async function GetRequires( ofile ) {
+			for ( const key in ofile.requires ) {
+				await RequireMemeBuild( key );
+			}
+		}
 		async function GetImports( ofile ) {
 			for ( const imp in ofile.imports ) {
 				const ocache =
@@ -870,6 +876,7 @@ async function Load( project ) {
 			ofile.struct =
 			await TRANSPILERS.ParseMJ( ofile.data  , ofile );
 			await GetExtends         ( ofile.struct        );
+			await GetRequires        ( ofile               );
 			await GetRequestScripts  ( ofile               );
 
 			if (  ofile.struct.is_server_class ) files_of_server[ofile.path] = ofile;
@@ -902,6 +909,11 @@ async function Load( project ) {
 
 			return ofile;
 		}
+		async function TranspileCF( ofile ) {
+			const struct =
+			await TRANSPILERS.ParseMJ( ofile.data, ofile );
+			await GetRequires        ( ofile             );
+		}
 
 		/* Inicio */
 		async function Inicio() {
@@ -920,10 +932,11 @@ async function Load( project ) {
 			if ( !ofile.data ) ofile.Read();
 
 			switch ( ofile.ext ) {
-				case '.mc': return await TranspileMC( ofile );
-				case '.mh': return await TranspileMH( ofile );
-				case '.mj': return await TranspileMJ( ofile );
-				default   : return await TranspileFI( ofile );
+				case '.mc'  : return await TranspileMC( ofile );
+				case '.mh'  : return await TranspileMH( ofile );
+				case '.mj'  : return await TranspileMJ( ofile );
+				case '.conf': return await TranspileCF( ofile );
+				default     : return await TranspileFI( ofile );
 			}
 		};return await Inicio();
 	}
@@ -1510,11 +1523,14 @@ async function Load( project ) {
 		TRANSPILERS.Configure({ config:CONFIG, address:project.address, exec:ExecScripts });
 		Watch();
 
-		cache               = Cache();
-		global.require_meme = RequireMeme;
-		const defaults      = ParsePath( __dirname, '..', '04_Defaults' );
-		const ya            = {};
-		const start_compile = performance.now();
+		cache                     = Cache();
+		global.require_meme       = RequireMeme;
+		global.require_meme_build = RequireMemeBuild;
+		const defaults            = ParsePath( __dirname, '..', '04_Defaults' );
+		const ya                  = {};
+		const start_compile       = performance.now();
+		TRANSPILERS.FilesCache    = cache;
+		TRANSPILERS.RequireMeme   = RequireMeme;
 
 		for ( const source of CONFIG.sources )  {
 			for ( const ofile of source.Travel({ filter:CONFIG.filter, ignore:CONFIG.ignore }) ) {
@@ -1530,6 +1546,10 @@ async function Load( project ) {
 				}
 				else console.Load ( `${col}[${ fil.url?.replace( /\]/g, '\\]' ) }] cd[${ fil.path?.replace( /\]/g, '\\]' ) }]` );
 			}
+		}
+
+		for ( const ofile of CONFIG.constants.work_space.Travel({ filter:[/\.conf$/] }) ) {
+			await Compile( ofile, false, ya );
 		}
 
 		for ( const ofile of defaults.Travel({ filter:[/\.js$/] }) ) {

@@ -224,7 +224,7 @@ async function Load( project ) {
 		if (  URLS[url]?.module_exports ) return URLS[url].module_exports;
 		if (  oparse.type!=='file'      ) return null;
 		if (  oparse.module_exports     ) return oparse.module_exports;
-		if ( !URLS[url]                 ) URLS[url] = oparse;
+		if ( !URLS[url]                 ) URLS[url]=oparse, oparse.url=url;
 
 		const node_modules    = new ( module.constructor )( oparse.path, module );
 		node_modules.paths    = ( module.constructor )._nodeModulePaths( oparse.dir );
@@ -250,8 +250,6 @@ async function Load( project ) {
 		return null;
 	}
 	async function ExecScripts( code, params ) {
-		code = code.replace( /require_meme/gm, 'await require_meme_async' );
-
 		try {
 			return await Object.getPrototypeOf( async function() {} )
 			.constructor( 'require', 'require_meme', code )
@@ -296,11 +294,8 @@ async function Load( project ) {
 			}
 
 			/*/ ***** Requires ***** /*/
-			for ( const req of Object.keys( oparse.requires ) ) {
-				const ofile          =
-				oparse.requires[req] =
-				await cache.Get( req       );
-				await Compile  ( ofile, ya );
+			for ( const key in oparse.requires ) {
+				await RequireMemeAsync( key );
 			}
 
 			/*/ ***** Imports ***** /*/
@@ -314,6 +309,21 @@ async function Load( project ) {
 
 			const is_require = !!oparse.data.match( /module\s*\.\s*exports\s*\=\s*/ );
 			oparse.is_require = is_require;
+
+			/*/ ***** Urls ***** /*/
+			oparse.url = oparse.struct.statics?.url?.value || oparse.struct.class_name || oparse.name;
+			oparse.url = oparse.url.replace( /^([^a-z]+)/i, '' ).toLowerCase();
+
+			if ( is_require ) {
+				oparse.url = `meme:${oparse.url}`;
+			}
+			else if ( oparse.url[0]!=='/' ) {
+				oparse.url = '/' + oparse.url;
+			}
+
+			URLS[oparse.url] = oparse;
+
+			if ( !oparse.struct.statics.url ) oparse.struct.statics.url = { is_static:true, name:'url', zone:7, value:oparse.url };
 
 			/*/ ***** Load ***** /*/
 			oparse.code = await COMPILERS.WriteModule( oparse.struct, oparse              );
@@ -344,19 +354,6 @@ async function Load( project ) {
 					console.Error( e.stack                                    );
 				}
 			}
-
-			/*/ ***** Urls ***** /*/
-			oparse.url = oparse.struct.statics?.url?.value || oparse.struct.class_name || oparse.name;
-			oparse.url = oparse.url.replace( /^([^a-z]+)/i, '' ).toLowerCase();
-
-			if ( is_require ) {
-				oparse.url = `meme:${oparse.url}`;
-			}
-			else if ( oparse.url[0]!=='/' ) {
-				oparse.url = '/' + oparse.url;
-			}
-
-			URLS[oparse.url] = oparse;
 
 			return oparse;
 		}
@@ -572,9 +569,11 @@ async function Load( project ) {
 
 		await ReadConfig( project );
 
-		cache                     = Cache();
-		global.require_meme       = RequireMeme;
-		global.require_meme_async = RequireMemeAsync;
+		cache                        = Cache();
+		global   .require_meme       = RequireMeme;
+		global   .require_meme_build = RequireMemeAsync;
+		COMPILERS.cache              = cache;
+		COMPILERS.RequireMeme        = RequireMemeAsync;
 
 		COMPILERS.Configure({ config:CONFIG, address:project.address, exec:ExecScripts });
 		Watch();
@@ -728,16 +727,50 @@ async function Build( project ) {
 		);
 	}
 
+	function WriteFiles() {
+		const dbuild = CONFIG.build;
+		let   newf, code, url;
+
+		for ( const file of Object.values( URLS ) ) {
+			if ( file.is_lib || file.is_module_exports ) {
+				url  = file.url.replace( /^meme\:/i, '' );
+				newf = ParsePath( dbuild.path, 'api', 'lib', url+'.js' );
+				code = file.code.replace( /require_meme\s*\(\s*\'/gm, "require('./" );
+
+				newf.Write( code );
+			}
+			else {
+				url  = file.name;
+				newf = ParsePath( dbuild.path, 'api', url+'.js' );
+				code = file.code.replace( /require_meme\s*\(\s*\'/gm, `require('./lib/` );
+
+				newf.Write( code );
+			}
+		}
+	}
+	function WriteServer() {
+		const dbuild  = CONFIG.build;
+		let   fconect = Connect.toString();
+		let   nef     = ParsePath( dbuild.path, 'meme_api.js' );
+
+		fconect = (
+			"const http       = require( 'node:http'   );\n" +
+			"const http2      = require( 'node:http2'  );\n" +
+			"const crypto     = require( 'node:crypto' );\n" +
+			"const { isUtf8 } = require( 'node:buffer' );\n" +
+			"\n" +
+			fconect
+		)
+
+		nef.Write( fconect );
+	}
+
 	/* Inicio */
 	async function Inicio() {
 		if ( project.id!==ID ) return;
 
-		if ( await CONFIG.tasks.Exec({ moment:'build', config:CONFIG, files:FILES, comilers:COMPILERS }) ) {
-			WriteFiles   ();
-			WriteLibs    ();
-			WriteExecs   ();
-			WriteDefaults();
-			WriteServer  ();
+		if ( await CONFIG.tasks.Exec({ moment:'build', config:CONFIG, files:FILES, urls:URLS, transpilers:COMPILERS }) ) {
+			WriteFiles();
 		}
 
 		DRIVER.Trigger( 'project/build/end', { id:ID, type:'api' } );

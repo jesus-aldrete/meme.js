@@ -140,7 +140,7 @@ const constants = {
  *
  * @returns {Object|null} Devuelve el objeto exportado por el módulo requerido, o `null` si el archivo no existe o no es un archivo.
  */
-global._require_meme_config = function( lib_name ) {
+global.require_meme = function( lib_name ) {
 	const lib = ParsePath( `${__dirname}/${lib_name}.js` );
 
 	if ( lib.type!=='file' ) return null;
@@ -243,7 +243,6 @@ async function LoadConfigFile( ofile ) {
 	code = await COMPILERS.TranspileGeneral( code, ofile                               );
 	code = await COMPILERS.TranspileEnd    ( code, ofile                               );
 	code = GenerateMAP                     ( ofile.data, code, ofile                   );
-	code = code.replace                    ( /require_meme/gm , '_require_meme_config' );
 
 	const node_modules    = new ( module.constructor )( ofile.path, module );
 	node_modules.paths    = ( module.constructor )._nodeModulePaths( ofile.dir );
@@ -368,6 +367,8 @@ function InitTasks( config ) {
 			return con;
 		},
 	};
+
+	if ( config.task_build ) config.tasks.push({ script:config.task_build, moment:['build'] });
 
 	config.tasks.forEach?.( v => {
 		if ( typeof v.script!=='function' ) return;

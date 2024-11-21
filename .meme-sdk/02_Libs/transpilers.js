@@ -877,6 +877,26 @@ module.exports = function() {
 				( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
 			);
 		}
+		function IsModule( cad, pos ) {
+			return (
+				cad[pos     ]==='m' &&
+				cad[pos + 1 ]==='o' &&
+				cad[pos + 2 ]==='d' &&
+				cad[pos + 3 ]==='u' &&
+				cad[pos + 4 ]==='l' &&
+				cad[pos + 5 ]==='e' &&
+				cad[pos + 6 ]==='.' &&
+				cad[pos + 7 ]==='e' &&
+				cad[pos + 8 ]==='x' &&
+				cad[pos + 9 ]==='p' &&
+				cad[pos + 10]==='o' &&
+				cad[pos + 11]==='r' &&
+				cad[pos + 12]==='t' &&
+				cad[pos + 13]==='s' &&
+				( ( pos + 14 )>=cad.length || IsSpecial( cad, pos + 14 ) ) &&
+				( ( pos - 1  )<0           || IsSpecial( cad, pos - 1  ) )
+			);
+		}
 
 		/* Get JS */
 		function GetZone( res, cad, pos ) {
@@ -920,7 +940,7 @@ module.exports = function() {
 
 			return [res, pos];
 		}
-		async function GetRequire( res, cad, pos ) {
+		async function GetRequire( res, cad, pos, ctx ) {
 			const pov = pos;
 
 			for ( pos+=7; pos<cad.length && cad[pos]!=='"' && cad[pos]!=="'" && cad[pos]!=='`'; pos++ );
@@ -941,7 +961,7 @@ module.exports = function() {
 
 			if ( com[0]==='m' && com[1]==='e' && com[2]==='m' && com[3]==='e' && com[4]===':' ) {
 				com = com.slice( 5 );
-				res+= `require_meme(${cha}${com}${cha}`;
+				res+= `${ ctx===cxBuild ? 'await require_meme_build' : 'require_meme' }(${cha}${com}${cha}`;
 
 				ofile.requires[com] = true;
 
@@ -1185,7 +1205,7 @@ module.exports = function() {
 			let code, pov = pos;
 
 			pos        += 5;
-			[code, pos] = await GetJS( '', cad, pos );
+			[code, pos] = await GetJS( '', cad, pos, false, cxBuild );
 			code        = await TranspileEnd( code, ofile, true );
 			code        = await WriteMapBuild( cad, code, pov, ofile );
 			code        = await EXEC( code, { ofile }, ofile ) ?? '';
@@ -1211,7 +1231,7 @@ module.exports = function() {
 		}
 
 		/* Get */
-		async function GetJS( res, cad, pos, is_first ) {
+		async function GetJS( res, cad, pos, is_first, ctx ) {
 			let   body, id, pov;
 			const end = is_first ? null : ( cad[pos]==='[' ? ']' : '}' );
 
@@ -1298,6 +1318,12 @@ module.exports = function() {
 						res+= cad[pos];
 					break;
 
+					case 'm':
+						if ( IsModule( cad, pos ) ) ofile.is_module_exports = true;
+
+						res+= cad[pos];
+					break;
+
 					case 'P':
 						if ( IsPosition( cad, pos ) ) ofile.is_Position_in_js = true;
 
@@ -1305,7 +1331,7 @@ module.exports = function() {
 					break;
 
 					case 'r':
-						if ( IsRequire( cad, pos ) ) [res, pos] = await GetRequire( res, cad, pos );
+						if ( IsRequire( cad, pos ) ) [res, pos] = await GetRequire( res, cad, pos, ctx );
 						else                         res       += cad[pos];
 					break;
 
@@ -1976,30 +2002,32 @@ module.exports = function() {
 			for ( pos++; pos<cad.length && con; pos++ ) {
 				switch ( cad[pos] ) {
 					case '|':
-						let com = true;
+						if ( cad[pos+1]==='$' ) {
+							[tem, pos] = GetVariable( '', cad, pos+1, nam );
+						}
+						else {
+							for_variable:
+							for ( pos++, tem = ''; pos<cad.length; pos++ ) {
+								switch ( cad[pos] ) {
+									case '(':
+									case '[':
+									case '{': [tem, pos] = GetGroup( tem, cad, pos, nam ); break;
 
-						for ( pos++, tem = ''; pos<cad.length && com; pos++ ) {
-							switch ( cad[pos] ) {
-								case '(':
-								case '[':
-								case '{': [tem, pos] = GetGroup( tem, cad, pos, nam ); break;
+									case '|':
+									case ' ':
+									case ';':
+									case '\t':
+									case '\n':
+									case '\r': pos--; break for_variable;
 
-								case '|':
-								case ' ':
-								case ';':
-								case '\t':
-								case '\n':
-								case '\r': com = false, pos--; break;
-
-								default: tem+= cad[pos];
+									default: tem+= cad[pos];
+								}
 							}
 						}
 
 						fol.push( tem );
 
-						pos--;
-
-						if ( cad[pos]!=='|' ) con = false;
+						if ( cad[pos-1]!=='|' ) con = false;
 					break;
 
 					default:
@@ -3819,6 +3847,7 @@ module.exports = function() {
 			if ( !struct.style ) return '';
 
 			return (
+				`/*.*style*.*/\n` +
 				`function Styles${struct.class_name}() {\n` +
 				`	if ( window['style_${struct.class_name}'] ) return;\n` +
 				"\n" +
@@ -3827,7 +3856,8 @@ module.exports = function() {
 				"\n" +
 				"	style        .appendChild( document.createTextNode( `"+ struct.style.code +"` ) );\n" +
 				"	document.head.appendChild( style );\n" +
-				`};Styles${struct.class_name}();\n`
+				`};Styles${struct.class_name}();\n` +
+				`/*.*style-end*.*/\n`
 			);
 		}
 
@@ -4129,7 +4159,7 @@ module.exports = function() {
 		}
 
 		function WriteClass( res ) {
-			if ( !struct.is_server_class ) return res;
+			if ( !struct.is_server_class || ofile.is_module_exports ) return res;
 
 			let res_general              = '', res_functions = '';
 			[res_general, res_functions] = WriteClassStatics  ( res_general, res_functions, struct );
