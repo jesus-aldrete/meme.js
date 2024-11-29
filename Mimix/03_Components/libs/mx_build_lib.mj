@@ -9,21 +9,20 @@ function GetExtends( tis, extends_class , ya ) {
 	const oextend     = tis.urls[`/${extends_class}.js`];
 
 	if ( !oextend || !oextend.struct?.is_client_class ) return '';
-	debugger
 
-	GetImports( oextend.imports              );
+	GetImports( tis, oextend.imports, ya     );
 	GetExtends( oextend.struct.extends_class );
 
 	let code = oextend.code;
 	let rex  = /\/\*\.\*class\*\.\*\//gmi.exec( code );
 	code     = code.slice( rex.index );
 
-	res_imports+= `\n${ code }\n`;
+	return `\n${ code }\n`;
 }
 function GetImports( tis, object_imports, ya ) {
 	let res = '';
 
-	for ( const [key,value] of Object.entries( object_imports ) ) {
+	for ( const [key,value] of Object.entries( object_imports || {} ) ) {
 		if ( ya[key] || !value.find( v=>!v.not_require ) ) continue;
 
 		ya[key]       = true;

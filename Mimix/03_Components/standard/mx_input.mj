@@ -11,6 +11,7 @@ class extends mx_input_box {
 	}
 	Style() {/* Tema */
 		@theme-light
+			--input-color          : $!back|#e8e8e8
 			--input_selection-back : $!high|#ffe743
 			--input_selection-color: $!back_10|#2e2e2e
 	}
@@ -18,6 +19,7 @@ class extends mx_input_box {
 		>.input
 			background : transparent
 			border     : none
+			color      : $input-color
 			flex       : 1
 			font-family: $!font-family_theme|'Trebuchet MS',Arial
 			font-size  : 16
