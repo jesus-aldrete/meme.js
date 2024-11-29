@@ -647,7 +647,7 @@ function Folding( documents, context ) {
 
 		if ( typeof lvl==='number' && lvl>=plv ) return false;
 
-		for ( ;pos<cad.length && IsValidLetter( cad, pos ); pos++ );
+		for ( ;pos<cad.length && ( IsValidLetter( cad, pos ) || ( cad[pos]==='!' && cad[pos-1]==='-' ) ); pos++ );
 		for ( ;pos<cad.length && IsSpacesTabs ( cad, pos ); pos++ );
 
 		return (
