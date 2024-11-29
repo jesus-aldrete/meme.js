@@ -1948,8 +1948,9 @@ module.exports = function() {
 		}
 		function GetGroup( res, cad, pos, name ) {
 			const end = cad[pos]==='(' ? ')' : ( cad[pos]==='[' ? ']' : '}' );
+			res      += cad[pos++];
 
-			for ( pos++; pos<cad.length; pos++ ) {
+			for ( ;pos<cad.length; pos++ ) {
 				switch ( cad[pos] ) {
 					case '$': [res, pos] = GetVariable( res, cad, pos, name ); break;
 

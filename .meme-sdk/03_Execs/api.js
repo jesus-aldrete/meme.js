@@ -234,6 +234,10 @@ async function Load( project ) {
 		if ( oparse.ext==='.mj' ) {
 			oparse.struct = await COMPILERS.ParseMJ    ( oparse.Read(), oparse );
 			oparse.code   = await COMPILERS.WriteModule( oparse.struct, oparse );
+
+			for ( const key in oparse.requires ) {
+				await RequireMemeAsync( key );
+			}
 		}
 		else oparse.code = oparse.Read();
 
