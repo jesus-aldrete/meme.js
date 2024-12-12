@@ -65,7 +65,7 @@ async function Load( project ) {
 		const url = `meme:${lib}`;
 
 		if ( !URLS[url] ) {
-			console.Error( `no se encontro la libreria: "${url}"` );
+			console.Error( `no se encontro la libreria: "fr[${url}]"` );
 
 			return null;
 		}
@@ -222,6 +222,7 @@ async function Load( project ) {
 		const url    = `meme:${lib}`;
 
 		if (  URLS[url]?.module_exports ) return URLS[url].module_exports;
+		if ( !oparse                    ) return null;
 		if (  oparse.type!=='file'      ) return null;
 		if (  oparse.module_exports     ) return oparse.module_exports;
 		if ( !URLS[url]                 ) URLS[url]=oparse, oparse.url=url;
@@ -232,8 +233,10 @@ async function Load( project ) {
 		node_modules.filename = oparse.path;
 
 		if ( oparse.ext==='.mj' ) {
-			oparse.struct = await COMPILERS.ParseMJ    ( oparse.Read(), oparse );
-			oparse.code   = await COMPILERS.WriteModule( oparse.struct, oparse );
+			oparse.is_require = true;
+			oparse.struct     = await COMPILERS.ParseMJ    ( oparse.Read(), oparse );
+			oparse.code       = await COMPILERS.WriteModule( oparse.struct, oparse );
+			oparse.code       = await COMPILERS.WriteMap   ( oparse.data, oparse.code, oparse );
 
 			for ( const key in oparse.requires ) {
 				await RequireMemeAsync( key );
@@ -313,6 +316,10 @@ async function Load( project ) {
 
 			const is_require = !!oparse.data.match( /module\s*\.\s*exports\s*\=\s*/ );
 			oparse.is_require = is_require;
+
+			if ( oparse.is_require && URLS[`meme:${oparse.name}`] ) {
+				return oparse;
+			}
 
 			/*/ ***** Urls ***** /*/
 			oparse.url = oparse.struct.statics?.url?.value || oparse.struct.class_name || oparse.name;

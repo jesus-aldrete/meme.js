@@ -73,14 +73,14 @@ async function Connect( project ) {
 	async function LoadFiles( ctx ) {
 		const accept_encoding = ctx.headers.acceptEncoding ?? '';
 
-		if ( CACHE_URL[ctx.raw_url] )
-			return ResponseFiles( CACHE_URL[ctx.raw_url], accept_encoding );
+		if ( CACHE_URL[ctx.url] )
+			return ResponseFiles( CACHE_URL[ctx.url], accept_encoding );
 
-		let ofile = URLS[ctx.raw_url];
+		let ofile = URLS[ctx.url];
 
 		if ( !ofile || ofile.not_available ) {
 			if (
-				ctx.raw_url.match( /\.(\w+)$/gmi ) ||
+				ctx.url.match( /\.(\w+)$/gmi ) ||
 				CONFIG.type!=='spa'
 			) return [];
 

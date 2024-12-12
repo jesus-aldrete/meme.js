@@ -276,12 +276,13 @@ function VlqDecode( value ) {
  * Abre una URL en el navegador predeterminado del sistema operativo.
  *
  * @param {string} url - La URL que se va a abrir en el navegador.
+ * @param {function} callback - Callback que se llamara cuando concluya la operacion.
  */
-function OpenLink( url ) {
+function OpenLink( url, callback ) {
 	switch ( process.platform ) {
-		case 'darwin': child.exec( `open ${url}`     ); break;
-		case 'win32' : child.exec( `start ${url}`    ); break;
-		default      : child.exec( `xdg-open ${url}` ); break;
+		case 'darwin': child.exec( `open "${url}"`    , callback ); break;
+		case 'win32' : child.exec( `start "${url}"`   , callback ); break;
+		default      : child.exec( `xdg-open "${url}"`, callback ); break;
 	}
 }
 /**
@@ -446,6 +447,40 @@ async function KillProcess( pid ) {
 
 	for ( const v of lis )
 		process.kill( v, 'SIGKILL' );
+}
+/**
+ * Ejecuta un comando de forma síncrona en un directorio especificado.
+ *
+ * @param {string} cwd - El directorio de trabajo donde se ejecutará el comando.
+ * @param {string} command - El comando que se ejecutará.
+ *
+ * @returns {Object} Un objeto que indica el resultado de la ejecución del comando.
+ * - Si el comando se ejecuta correctamente, devuelve `{ ok: true }`.
+ * - Si ocurre un error, devuelve `{ error: string }` con el mensaje de error.
+ */
+function ExecCommand( cwd, command ) {
+	const result = child.spawnSync(
+		command,
+		{
+			cwd     ,
+			shell   : true,
+			encoding: 'utf-8',
+		}
+	);
+
+	if ( result.error ) {
+		console.Error( `Error al ejecutar el comando cd["${command}"]: ${result.error.message}` );
+
+		return { error:`Error al ejecutar el comando cd["${command}"]: ${result.error.message}`, message:result.error.message };
+	}
+	else if ( result.status!==0 ) {
+		console.Error( `El comando cd["${command}"] se ejecutó, pero falló:` );
+		console.Error( result.stderr                                         );
+
+		return { error:`Error al ejecutar el comando cd["${command}"]`, message:result.stderr };
+	}
+
+	return { ok:true, message:result.stderr };
 }
 // ####################################################################################################
 
@@ -993,6 +1028,7 @@ module.exports = {
 	StrToDatSocket,
 	StrToRegExp   ,
 	KillProcess   ,
+	ExecCommand   ,
 
 	EncodeBase64Url,
 	DecodeBase64Url,
