@@ -1,0 +1,135 @@
+class {
+	Load () {
+		/* Declaraciones */
+		const { urls, file }      = this;
+		const { ParsePath, Hash } = require( 'meme:lib' );
+		// **************************************************
+
+		/* Funciones */
+		function LoadCommands() {
+			const new_ofile = ParsePath( file.path );
+			const code      = `exclude file './mx_lang_commands_min.js'`;
+
+			new_ofile.data_hash = Hash( code );
+			new_ofile.url       = '/lang-commands.js';
+			new_ofile.code      = code;
+			new_ofile.imports   = {};
+			urls[new_ofile.url] = new_ofile;
+		}
+		function LoadMeme    () {
+			const new_ofile = ParsePath( file.path );
+			const code      = `exclude file './mx_lang_meme_min.js'`;
+
+			new_ofile.data_hash = Hash( code );
+			new_ofile.url       = '/lang-meme.js';
+			new_ofile.code      = code;
+			new_ofile.imports   = {};
+			urls[new_ofile.url] = new_ofile;
+		}
+		// **************************************************
+
+		/* Inicio */
+		function Inicio() {
+			LoadCommands();
+			LoadMeme    ();
+		};return Inicio();
+		// **************************************************
+	}
+	View () {
+		&._is_not_codemirror
+
+		pre*code>{this.body}
+	}
+	Style() {
+		exclude file './mx_editor.css'
+	}
+
+	// public
+	async Create() {
+		let   url, id_code;
+		const code = props.code = refs.code.textContent;
+
+		switch ( props.type ) {
+			case 'commands':
+				url     = '[[APP]]/lang-commands.js';
+				id_code = 'meme-commands';
+			break;
+
+			case 'mh':
+				url     = '[[APP]]/lang-meme.js';
+				id_code = 'memehtml';
+			break;
+
+			case 'mj':
+				url     = '[[APP]]/lang-meme.js';
+				id_code = 'memejs';
+			break;
+		}
+
+		if ( !code || !url || !id_code ) return;
+
+		window._mx_code_func_init = function() { exclude file './mx_editor_min.js' };
+		!window.CodeMirror && window._mx_code_func_init();
+
+		window._mx_code_types??= {};
+		const obj              = window._mx_code_types;
+		const exec             = ( type ) => {
+			clearTimeout( obj[type].timer );
+
+			obj[type].timer = setTimeout(
+				() => {
+					for ( let i = obj[type].funcs.length; i--; ) {
+						obj[type].funcs[i]();
+						obj[type].funcs.splice( i, 1 );
+					}
+				},
+				100
+			);
+		};
+
+		obj[props.type]      ??= {};
+		obj[props.type].funcs??= [];
+
+		obj[props.type].funcs.push(
+			() => {
+				refs.code.html = '';
+
+				props.editor = CodeMirror( refs.code, {
+					mode    : id_code,
+					value   : code,
+					readOnly: props.read_only,
+				});
+
+				this.Class( '_is_not_codemirror', false );
+			}
+		);
+
+		if ( !obj[props.type].is_download ) {
+			obj[props.type].is_download = true;
+			const result                = await fetch( url ).catch( console.error );
+
+			if ( !result.ok ) return;
+
+			const script_element = document.createElement( 'script' );
+			script_element.id    = `mx_code_script_${props.type}`;
+			script_element.text  = await result.text();
+
+			document.body.appendChild( script_element );
+			exec( props.type );
+		}
+		else exec( props.type );
+	}
+
+	// public
+	async Copiar() {
+		const select_origin = props.editor.listSelections();
+
+		props.editor.execCommand( 'selectAll' );
+
+		const text_copy = props.editor.getSelection();
+
+		await navigator.clipboard.writeText( text_copy ).catch( e => console.error( 'No se pudo copiar el código: ', e ) );
+
+		props.editor.setSelections( select_origin );
+	}
+}

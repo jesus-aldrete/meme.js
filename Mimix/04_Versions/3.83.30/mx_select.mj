@@ -1,0 +1,111 @@
+class extends mx_input_box {
+	// front-public
+	id_input = 'i' + Hash();
+
+	// front-public
+	View () {
+		select*select#{this.id_input} (focus)=onFocus (blur)=onBlur (change)=onChange>{this.body}
+		*value
+		mx_svg.icon icon=fill:caret-down
+	}
+	Style() {/* Tema */
+		@theme-light
+			--icon-color          : $!back_10|#2e2e2e
+			--_disabled_icon-color: $!soft_75|#979797
+		@theme-dark
+			--icon-color          : $!high|#ffe743
+			--_disabled_icon-color: $!soft_70|#828282
+	}
+	Style() {
+		cursor: default
+		>.select
+			height  : 100%
+			left    : 0
+			opacity : .001
+			position: absolute
+			top     : 0
+			width   : 100%
+		>.value
+			background : transparent
+			flex       : 1
+			font-family: $!font-family_theme|'Trebuchet MS',Arial
+			font-size  : 16
+			line-height: 1
+		>.icon
+			color : $icon-color
+			height: 19
+			width : 19
+	}
+	Style() {/* Estado */
+		&._disabled >.icon
+			color: $_disabled_icon-color
+	}
+
+	// front-public
+	get caption(     ) { return props.caption ?? '' }
+	set caption( val ) {
+		props.caption       =
+		refs.select  .title =
+		refs.sublabel.html  =
+		refs.label   .html  = String( val );
+	}
+
+	get enabled(     ) { return !!( props.enabled ?? true ) }
+	set enabled( val ) {
+		val           =
+		props.enabled = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this       .Class( '_disabled', !val );
+		refs.select.Atts (  'disabled', !val );
+	}
+
+	get value(     ) { return props.selected_option }
+	set value( val ) {
+		const options             = refs.select.options;
+		props.no_change           = true;
+		val                       = String( val );
+		refs.select.selectedIndex = -1;
+
+		for ( const option of options ) {
+			if ( option.value==val || option.html==val ) {
+				refs.select.selectedIndex = option.index;
+
+				break;
+			}
+		}
+
+		onChange({ target:refs.select });
+		props.no_change = undefined;
+	}
+
+	// front-private
+	onFocus (       ) {
+		this.Class( '_focus', true );
+	}
+	onBlur  (       ) {
+		this.Class( '_focus', false );
+	}
+	onChange( event ) {
+		event?.stopPropagation?.();
+		event?.preventDefault?.();
+
+		const { target:{ options } } = event;
+		const selected_option        =
+		props.selected_option        = options[options.selectedIndex];
+
+		if ( selected_option.html ) {
+			refs.value.html = selected_option.html;
+
+			this.Class( '_fill', true );
+		}
+		else {
+			refs.value.html = '';
+
+			this.Class( '_fill', false );
+		}
+
+		if ( !props.no_change ) {
+			this.Trigger( 'change', selected_option );
+		}
+	}
+}

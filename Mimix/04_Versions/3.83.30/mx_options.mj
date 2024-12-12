@@ -1,0 +1,115 @@
+class {
+	View () {
+		mx_options_header*header caption={props.caption}
+		.shadow
+		*bar
+		*cont>[*scroll>{this.body}]
+	}
+	Style() {/* Tema */
+		@theme-light
+			--back    : $!back|#e8e8e8
+			--bar-back: $!high|#ffe743
+		@theme-dark
+			--back    : $!back_10|#2e2e2e
+			--bar-back: $!high|#ffe743
+	}
+	Style() {/* Estilos */
+		background-color: $back
+		display         : flex
+		flex-direction  : column
+		overflow        : hidden
+		padding         : 0 20
+		position        : relative
+		>.header
+			margin-top: 20
+			z-index   : 3
+		>.shadow
+			border-radius: 100%
+			bottom       : 0
+			box-shadow   : 0 0 10 rgba( 0,0,0,1 )
+			height       : 5
+			margin       : -5 2 0
+			opacity      : 0
+			transition   : opacity .3s ease-out
+			z-index      : 2
+		>.bar
+			background   : $bar-back
+			border-radius: 100
+			position     : absolute
+			right        : 8
+			top          : 0
+			width        : 3
+			z-index      : 13
+		>.cont
+			flex       : 1
+			overflow   : hidden
+			overflow-y : scroll
+			padding-top: 10
+			position   : relative
+			width      : calc(100% + 100px)
+			z-index    : 1
+			>.scroll
+				display       : flex
+				flex-direction: column
+				margin-right  : 100
+				position      : relative
+				z-index       : 2
+				>*
+					flex: none
+	}
+	Style() {/* Estados */
+		&._is_shadow >.shadow:>opacity: 1
+	}
+
+	// public
+	Create () {
+		props.resize_observer = new ResizeObserver( onResize )
+
+		props.resize_observer.observe( this )
+		props.resize_observer.observe( refs.scroll )
+		document.addEventListener( 'scroll', onScroll, { capture:true, passive:true })
+	}
+	Destroy() {
+		document.removeEventListener( 'scroll', onScroll, { capture:true, passive:true })
+		props.resize_observer.disconnect()
+	}
+
+	// private
+	onScroll( event ) {
+		if ( refs.cont.scrollTop>5 ) {
+			if ( !props.is_shadow ) {
+				props.is_shadow = true;
+
+				this.Class( '_is_shadow', true );
+			}
+		}
+		else {
+			if ( props.is_shadow ) {
+				props.is_shadow = false;
+
+				this.Class( '_is_shadow', false );
+			}
+		}
+
+		refs.bar.style.top = ( ( refs.cont.scrollTop * scroll.max_bar ) / scroll.max_scroll ) + 'px';
+	}
+	onResize( event ) {
+		const
+		win = this.Position().height,
+		pos = refs.cont.Position(),
+		con = pos.height,
+		max = refs.cont.scrollHeight
+
+		let
+		bar = ( con * win ) / max;
+
+		if ( bar<10   ) bar = 10;
+		if ( bar>=win ) bar = 0;
+
+		scroll.max_bar    = win - bar;
+		scroll.max_scroll = max - ( win - pos.top );
+
+		refs.bar.Css( 'height', bar );
+		onScroll();
+	}
+}

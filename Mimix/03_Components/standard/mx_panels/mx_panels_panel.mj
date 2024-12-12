@@ -1,0 +1,107 @@
+class {
+	View  () {
+		.box (click)=onClick
+			mx_svg.icon_arrow style icon=regular:caret-right
+			slot id=box
+		*items
+			slot id=frame
+		hr*line
+	}
+	Style () {/* Tema */
+		@theme-light
+			--box_h-color          : $!back_25
+			--line-back            : $!soft_40
+			--_open_line_after-back: $!high_35
+		@theme-dark
+			--box-color            : $!back_25|#747474
+			--line-back            : $!soft_60|#585858
+			--_open_line_after-back: $!high_35|#b3a22f
+	}
+	Style () {
+		display       : flex
+		flex          : none
+		flex-direction: column
+		position      : relative
+		>.box
+			align-items: center
+			box-sizing : border-box
+			color      : $box-color
+			cursor     : pointer
+			display    : flex
+			gap        : 5
+			padding    : 10 10 10 0
+			user-select: none
+			>.icon_arrow
+				align-items    : center
+				display        : flex
+				height         : 20
+				justify-content: center
+				width          : 20
+				svg
+					height: 15
+					width : 15
+			h1, h2, h3, h4, h5, h6
+				flex     : 1
+				font-size: 16
+				margin   : 0
+				font-family: "Trebuchet MS", Arial
+		>.items
+			display : none
+			overflow: auto
+		>.line
+			background-color: $line-back
+			border          : none
+			bottom          : 0
+			height          : 1
+			margin          : 0
+			overflow        : visible
+			position        : absolute
+			width           : 100%
+			z-index         : 20
+	}
+	Style () {/* Estados */
+		&._open
+			>.box >.icon_arrow:>transform: rotate(90deg)
+			>.items:>display: block
+			>.line
+				::after
+					background-color: $_open_line_after-back
+					content         : ''
+					cursor          : row-resize
+					height          : 8
+					left            : 0
+					opacity         : 0
+					position        : absolute
+					top             : 50%
+					transform       : translateY(-50%)
+					width           : 100%
+					z-index         : 10
+				::hover::after:>opacity: .2
+			&._is_drop >.line::after:>opacity: .2
+
+		&._last >.line::after:>display: none
+	}
+	Create() {
+		if ( props.open==null ) {
+			this.open = true;
+		}
+	}
+
+	// front-public
+	get open(     ) { return props.open }
+	set open( val ) {
+		val        =
+		props.open = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		if ( val ) this.Trigger( 'open', val );
+
+		this.Class( '_open', val );
+
+		if ( !val ) this.Trigger( 'open', val );
+	}
+
+	// front-private
+	onClick() {
+		this.open = !this.open;
+	}
+}

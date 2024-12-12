@@ -1,0 +1,163 @@
+class {
+	View  () {
+		h1*title>¡Éxito!
+		h2*desc>¡Felicitaciones, su conexión fue exitosa!
+		h3*title_error>¡[span*platform] y [span.hidra>{props.app}] están listos para comenzar!
+		.logos
+			mx_svg.image*logo1.fill size=0 loaded={*['sticker:github-logo','sticker:gitlab-logo','google-logo']}
+			img.image.logo2 src={ props.logo }
+		h4>¿No funcionó?
+		p>Copie el token y péguelo en {props.app}.
+		*token
+		mx_button.btn (click)=onClick>copiar
+	}
+	Style () {/* Global */
+		!*::::selection
+			background-color: rgba( $_soft, .3 )
+		!body
+			align-items    : center
+			display        : flex
+			flex-direction : column
+			height         : 100%
+			justify-content: center
+			margin         : 0
+			overflow       : hidden
+			padding        : 0
+			position       : absolute
+			width          : 100%
+	}
+	Style () {/* Estilos */
+		align-items    : center
+		display        : flex
+		flex-direction : column
+		justify-content: center
+		>h1
+			color      : $!cgreen
+			font-size  : 50
+			font-weight: bold
+		>h2
+			font-size : 16
+			margin-top: 30
+			max-width  : 500
+		>h3
+			font-size  : 23
+			font-weight: 100
+			margin-top : 30
+			>span
+				font-weight: bold
+			>.hidra
+				color: $!high
+		>.logos
+			align-items: center
+			display    : flex
+			gap        : 50
+			margin-top : 30
+			>.image
+				height: 200
+				width : 200
+			>.logo1
+				fill: $!high
+				svg
+					height: 200
+					width : 200
+		>h4
+			color     : $!high
+			font-size : 25
+			margin-top: 100
+			position  : relative
+			::after
+				background: $!soft_60
+				content   : ''
+				height    : 1
+				left      : 50%
+				position  : absolute
+				top       : -25
+				transform : translateX(-50%)
+				width     : 500
+		>p
+			margin-top: 30
+		>.token
+			background-color: $!soft_40
+			border          : solid 1 $!soft_60
+			margin-top      : 30
+			overflow-x      : scroll
+			padding         : 15 20
+			width           : 500
+		>.btn
+			margin-top: 10
+	}
+	Style () {/* Estados */
+		&._error
+			>h1
+				color: $!cred
+			>.logos >.logo2, >h4, >p, >.token, >.btn
+				display: none
+
+		&._not_viwe_token
+			>h4, >p, >.token, >.btn
+				display: none
+	}
+	Create() {
+		const loc = window.location;
+		const que = loc.search.slice( 1 ).split( '&' ).map( v => v.split( '=' ) ).reduce(
+			( r, v ) => {
+				r[v[0]] = v[1]
+
+				return r
+			}
+		, {});
+
+		switch ( que.page ) {
+			case 'github'   : refs.platform.html = 'GitHub'   ; refs.logo1.svg = 'sticker:github-logo'   ; break;
+			case 'gitlab'   : refs.platform.html = 'GitLab'   ; refs.logo1.svg = 'sticker:gitlab-logo'   ; break;
+			case 'bitbucket': refs.platform.html = 'Bitbuckey'; refs.logo1.svg = 'sticker:bitbucket-logo'; break;
+			case 'google'   : refs.platform.html = 'google'   ; refs.logo1.svg = 'sticker:google-logo'   ; break;
+		}
+
+		switch ( que.type ) {
+			case 'ok': refs.token.html = que.token; break;
+
+			case 'error':
+				this.Class( '_error', true );
+
+				let err = atob( que.token );
+
+				try         { err=JSON.parse( err ) }
+				catch ( e ) { err={}; console.error( e ) }
+
+				refs.title      .html = '¡Error!';
+				refs.title_error.html = err.error;
+				refs.desc       .html = err.message;
+			break;
+		}
+	}
+
+	// front-public
+	get view_token(     ) { return props.view_token ?? true }
+	set view_token( val ) {
+		if ( typeof val==='string' ) val = !!val.match( /true/i )
+		else                         val = !!val
+
+		this.Class( '_not_viwe_token', !val )
+	}
+
+	// front-private
+	onClick() {
+		const tar = document.createElement( 'textarea' );
+		tar.value = refs.token.html;
+
+		document.body.appendChild( tar );
+		tar.focus ();
+		tar.select();
+
+		try {
+			this.Class( document.execCommand( 'copy' ) ? '_ok' : '_fail', true );
+			setTimeout( ()=>{ this.Class( /_ok|_fail/, false ) }, 2000 );
+		}
+		catch ( err ) {
+			console.error( err );
+		}
+
+		document.body.removeChild( tar );
+	}
+}

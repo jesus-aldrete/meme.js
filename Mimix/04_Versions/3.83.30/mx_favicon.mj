@@ -1,0 +1,5 @@
+class {
+	Tag() {
+		return `<link rel="icon" href="${this.props.src}" type="image/x-icon"/>`
+	}
+}

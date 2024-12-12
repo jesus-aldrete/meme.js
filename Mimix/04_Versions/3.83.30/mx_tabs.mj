@@ -1,0 +1,189 @@
+class {
+	View () {
+		*tabs (click)=onClickTab (mousedown)=onDown (close)=onClose>{this.body}
+		.btn_add (click)=onClickAdd
+			button.btn>[mx_svg.icon icon=duotone:plus-square]
+	}
+	Style() {/* Tema */
+		@theme-light
+			--btn_add-border: $!soft_75|#979797
+			--btn_add_btn-back : $!soft_85|#c0c0c0
+			--btn_add_btn-color: $!back_10|#2e2e2e
+		@theme-dark
+			--btn_add-border: $!soft_60|#585858
+			--btn_add_btn-back : $!soft_40|#bababa
+			--btn_add_btn-color: $!back_40|#bababa
+	}
+	Style() {
+		align-items: flex-end
+		display    : flex
+		gap        : 10
+		padding    : 0 30
+		z-index    : 2
+		>.tabs
+			align-items: flex-end
+			display    : flex
+			gap        : 5
+		>.btn_add
+			border-left: solid 1 $btn_add-border
+			display    : none
+			>.btn
+				align-items     : center
+				background-color: $btn_add_btn-back
+				border          : none
+				color           : $btn_add_btn-color
+				display         : flex
+				height          : 33
+				justify-content : center
+				margin          : 0 0 0 10
+				padding         : 0
+				width           : 33
+				>.icon
+					height        : 25
+					pointer-events: none
+					width         : 25
+	}
+	Style() {/* Estados */
+		&._in_move >.tabs:>opacity: .4
+			._hide:>opacity: 0
+
+		&._button_add >.btn_add:>display: flex
+	}
+
+	// front-public
+	Create() {
+		refs.tabs.childs.forEach( ( v, i ) => v.order=i );
+	}
+
+	// front-public
+	get tabs() { return refs.tabs }
+
+	get button_add(     ) { return !!props.button_add }
+	set button_add( val ) {
+		props.button_add = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class( '_button_add', props.button_add );
+	}
+
+	// front-private
+	onClickTab( event ) {
+		event.stopPropagation();
+
+		const { target:ele } = event;
+
+		if ( ele.tagName!=='MX-TAB' ) return;
+
+		clearTimeout( props.timer );
+
+		ele.active = true;
+	}
+	onClickAdd( event ) {
+		event.stopPropagation();
+		event.preventDefault();
+
+		this.Trigger( 'add' );
+	}
+	onClose   ( event ) {
+		let { value, order } = event.target;
+
+		if ( --order<0 ) order = 0;
+
+		event.target.Remove();
+
+		if ( refs.tabs.childs[order] ) {
+			refs.tabs.childs[order].active = true;
+		}
+
+		refs.tabs.childs
+		.sort   ( ( a, b ) => a.order - b.order )
+		.forEach( ( v, i ) => v.order=i         );
+	}
+
+	onDown( event ) {
+		if ( event.target.tagName!=='MX-TAB' ) return;
+
+		props.timer = setTimeout( ()=>{
+			const element = event.target;
+			const drop    =
+			props.drop    = {};
+			const childs  = refs.tabs.childs;
+
+			childs.sort( ( a, b ) => a.order - b.order );
+
+			drop.id = 'i' + Hash();
+
+			document.body.Add({mh mx_tab._ghost#{drop.id} active={element.acive}>{element.cont.html} });
+
+			drop.element     = element;
+			drop.element_new = window[drop.id];
+
+			drop.element_new.Clone( element );
+
+			drop.position  = this.Position();
+			drop.start_x   = event.offsetX;
+			drop.min_x     = refs.tabs.Position( 'off' ).left - 1;
+			const last_tab = childs.at( -1 );
+			drop.max_x     = last_tab.Position( 'off' ).left + 1;
+
+			/* Posiciones */
+			drop.positions = childs;
+			for ( let i=drop.positions.length; i--; ) {
+				const child = drop.positions[i];
+
+				child.left  = child.Position('off').left;
+				child.order = i;
+			}
+
+			drop.origin = drop.element.left + 2;
+
+			/* Funciones */
+			drop.switch_elements = ( child ) => {
+				[drop.element.order, child.order] = [child.order, drop.element.order];
+				drop.positions                    = drop.positions.map( v => { v.left=v.Position( 'off' ).left; return v });
+				drop.origin                       = drop.element.left + 2;
+			};
+
+			drop.element.Class( '_hide'   , true );
+			this.Class        ( '_in_move', true );
+
+			document.addEventListener( 'mousemove', onMove );
+			document.addEventListener( 'mouseup'  , onUper );
+		}, 200 );
+	}
+	onMove( event ) {
+		const drop = props.drop;
+		let   x    = event.pageX - drop.start_x;
+
+		// if ( x>drop.max_x ) x = drop.max_x;
+		if ( x<drop.min_x ) x = drop.min_x;
+
+		drop.element_new.style.left = x + 'px';
+
+		for ( const pos of drop.positions ) {
+			if ( pos===drop.element ) continue;
+
+			if ( drop.origin<x ) {
+				if ( pos.left<x && pos.order>drop.element.order ) {
+					drop.switch_elements( pos );
+					break;
+				}
+			}
+			else if ( pos.left>x && pos.order<drop.element.order ) {
+				drop.switch_elements( pos );
+				break;
+			}
+		}
+	}
+	onUper( event ) {
+		const drop = props.drop;
+		props.drop = null;
+
+		drop.element.Class( '_hide'   , false );
+		this.Class        ( '_in_move', false );
+
+		drop.element_new.Remove();
+
+		document.removeEventListener( 'mousemove', onMove );
+		document.removeEventListener( 'mouseup'  , onUper );
+	}
+}

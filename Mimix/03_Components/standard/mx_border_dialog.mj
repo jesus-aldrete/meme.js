@@ -1,0 +1,84 @@
+class {
+	Style() {
+		@theme-dark
+			--after-back   : $!soft_40|#252525
+			--cont_back    : $!soft|#2e2e2e
+			--_animate-back: $!soft_40|#252525
+
+		display       : none
+		height        : 100%
+		left          : 0
+		overflow      : hidden
+		pointer-events: all
+		position      : absolute
+		top           : 0
+		width         : 100%
+		z-index       : 3
+		::after
+			background-color: $after-back
+			bottom          : 0
+			content         : ''
+			left            : 0
+			opacity         : 0
+			position        : absolute
+			right           : 0
+			top             : 0
+			transition      : opacity .3s ease-out
+			z-index         : 1
+		>.cont
+			background-color: $cont_back
+			border-radius   : 10 0 0 10
+			box-shadow      : 0 0 10 rgba( 0,0,0,.5 )
+			display         : flex
+			flex-direction  : column
+			gap             : 10
+			height          : 100%
+			padding         : 20
+			position        : absolute
+			right           : 0
+			top             : 0
+			transform       : translateX(100%)
+			transition      : transform .3s ease-out
+			z-index         : 2
+
+		&.top
+			>.cont
+				border-radius: 0 0 10 10
+				height       : auto
+				left         : 50%
+				right        : auto
+				transform    : translate(-50%,-100%)
+			&._animate >.cont:>transform:translate(-50%,0%)
+
+		&._visible:>display: block
+
+		&._animate
+			::after:>opacity: .9
+			>.cont:>transform:translateX(0%)
+	}
+
+	// front-public
+	get view(     ) { return !!props.view }
+	set view( val ) {
+		props.view = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		clearTimeout( props.timer );
+
+		if ( props.view ) {
+			this.Class( '_visible', true );
+
+			setTimeout( ()=>{
+				this.Class( '_animate', true );
+				this.Trigger( 'view', true );
+			}, 10 );
+		}
+		else {
+			setTimeout( ()=>{ this.Class( '_animate', false ) }, 0 );
+
+			props.timer = setTimeout( ()=>{
+				this.Class( '_visible', false );
+				this.Trigger( 'view', false );
+			}, 350 );
+		}
+	}
+}

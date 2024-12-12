@@ -1,0 +1,238 @@
+
+
+/*/ ***** Importaciones ***** /*/
+const lib           = require( 'meme:lib'           );
+const crypto        = require( 'node:crypto'        );
+const child_process = require( 'node:child_process' );
+// ####################################################################################################
+
+
+/*/ ***** Declaraciones ***** /*/
+const RUNS = {};
+// ####################################################################################################
+
+
+/*/ ***** Funciones ***** /*/
+function CreateFingerprint( key ) {
+	const clean_key = key
+		.split ( '\n' )
+		.filter( v => !v.startsWith( 'ssh-' ) )
+		.join  ( '' );
+
+	const buffer = Buffer.from( clean_key, 'base64' );
+	const hash   = crypto.createHash( 'md5' ).update( buffer ).digest( 'hex' );
+
+	return hash.match( /.{1,2}/g ).join( ':' );
+}
+
+async function ParseError( response, token, func ) {
+	let error = response.error;
+	let obj   = response.body;
+
+	try {
+		obj = JSON.parse( obj );
+
+		if ( ( obj.error_description || '' ).match( /expired/i ) ) {
+			debugger
+			const dat = JSON.stringify({
+				grant_type   : 'refresh_token',
+				refresh_token: token.refresh_token,
+				client_id    : token.client_id,
+				client_secret: token.client_secret,
+			});
+
+			let res = await lib.Fetch( 'https://gitlab.com/oauth/token', {
+				method : 'POST',
+				headers: {
+					Authorization: `Bearer ${token.access_token}`
+				},
+			});
+
+			debugger
+		}
+
+		return { error, message:obj.error_description || obj.message };
+	}
+	catch ( e ) {
+		return { error:'bad parse', message:e.message };
+	}
+}
+// ####################################################################################################
+
+
+/*/ ***** OAuth ***** /*/
+function Start( data ) {
+	const state        = crypto.randomBytes( 16 ).toString( 'hex' );
+	const scope        = encodeURIComponent( data.scope );
+	const client_id    = data.client_id;
+	const redirect_uri = encodeURIComponent( data.redirect_uri );
+	const url          = `https://gitlab.com/oauth/authorize?client_id=${client_id}&redirect_uri=${redirect_uri}&scope=${scope}&state=${state}&response_type=code`;
+
+	lib.OpenLink(
+		url,
+		err => err && console.Error( `No se pudo abrir el navegador: ${err}` )
+	);
+
+	return new Promise( ( run ) => RUNS[state]=run );
+}
+
+async function Redirect( data, params ) {
+	let   { code, state, error, error_description }          = params;
+	const { client_id, client_secret, redirect_uri, result } = data;
+	let   type, token;
+
+	if ( !client_id || !client_secret || !redirect_uri || !result ) return { error:'bad autentication', error:'Error de autenticación' };
+
+	if ( !error ) {
+		token = await lib.Fetch(
+			'https://gitlab.com/oauth/token',
+			{
+				method: 'POST',
+				body  : {
+					code         ,
+					client_id    ,
+					redirect_uri ,
+					client_secret,
+					grant_type   : 'authorization_code',
+				},
+			}
+		);
+
+		if ( typeof token.body==='string' ) {
+			let body = token.body;
+
+			try         { token = JSON.parse( body ) }
+			catch ( e ) {
+				console.Error( `error al parsear el texto: cd[${body}]` );
+				console.Error( e );
+			}
+		}
+		else token = token.body;
+
+		if ( token.error ) {
+			error             = token.error;
+			error_description = token.error_description;
+		}
+		else token = { client_id, client_secret, type:'gitlab', access_token:token.access_token, refresh_token:token.refresh_token };
+	}
+
+	if ( error ) {
+		type  = 'error';
+		token = { error, message:error_description };
+	}
+	else {
+		type  = 'ok';
+		token = { ok:true, token };
+	}
+
+	if ( typeof RUNS[state]==='function' ) RUNS[state]( token );
+
+	delete RUNS[state];
+
+	if ( token.ok ) {
+		token = { ok:true, token:lib.EncodeJWE( '[[jwe_secret]]', token.token ) };
+	}
+
+	return {
+		_code   : 302,
+		_headers: {
+			Location: encodeURI( `${result}?type=${type}&page=gitlab&token=${btoa( JSON.stringify( token ) )}` ),
+		}
+	};
+}
+// ####################################################################################################
+
+
+/*/ ***** Gets ***** /*/
+async function GetInfo  ( token       ) {
+	let result = await lib.Fetch( 'https://gitlab.com/api/v4/user', { headers:{ Authorization:`Bearer ${token.access_token}` } } )
+
+	if ( !result.ok ) return { error:'bad petition', message:'fallo la peticion a gitlab.com' };
+
+	result.body.ok = true;
+
+	return result.body;
+}
+async function CreateSSH( token       ) {
+	/*/ ***** creacion del certificado ***** /*/
+		const folder = lib.ParsePath( '~/.ssh' );
+
+		if ( folder.type!=='folder' ) return { error:'bad folder', message:'el folder de trabajo no es correcto.' };
+
+		let   res   ;
+		const title = `GitMergedKey`;
+		let   file  = lib.ParsePath( folder.path, title );
+
+		if ( file.type===null ) {
+			res = lib.ExecCommand( '.', `ssh-keygen -t rsa -b 4096 -f ${file.path} -N ""` );
+
+			if ( res.error ) return res;
+		}
+
+		file = lib.ParsePath( folder.path, `${title}.pub` );
+
+		if ( file.type!=='file' ) return { error:'bad generate', message:'no fue posible generar la clave.' }
+
+	/*/ ***** get keys ***** /*/
+		const
+		key = file.Read().split( '=' )[0];
+		res = await lib.Fetch( 'https://gitlab.com/api/v4/user/keys', { headers:{ Authorization:`Bearer ${token.access_token}` } });
+
+		if ( !res.ok ) return await ParseError( res, token, CreateSSH );
+
+		res = res.body.find( v => v.key.indexOf( key )>=0 );
+
+	/*/ ***** set keys ***** /*/
+		if ( !res ) {
+			const payload = JSON.stringify({ title, key:file.data });
+
+			res = await lib.Fetch( 'https://gitlab.com/api/v4/user/keys', {
+				body   : payload,
+				method : 'POST',
+				headers: {
+					Authorization   : `Bearer ${token.access_token}`,
+					'Content-Type'  : 'application/json',
+					'Content-Length': payload.length,
+				},
+			});
+
+			if ( res.ok ) res = res.body;
+			else          return ParseError( res );
+		}
+
+		token.ssh = {
+			id         : res.id,
+			path       : `${file.dir}/${file.name}`,
+			path_pub   : file.path,
+			date       : res.created_at,
+			title      : res.title,
+			fingerprint: CreateFingerprint( file.data ),
+		};
+
+		return { ok:true, token };
+}
+async function RevokeSSH( token, data ) {
+	const res = await lib.Fetch( `https://gitlab.com/api/v4/user/keys/${data.id}`, {
+		method : 'DELETE',
+		headers: {
+			Authorization: `Bearer ${token.access_token}`,
+		},
+	});
+
+	if ( res.ok ) {
+		delete token.ssh;
+
+		return { ok:true, token };
+	}
+	else return await ParseError( res, token, RevokeSSH );
+}
+// ####################################################################################################
+
+
+/*/ ***** Exportaciones ***** /*/
+module.exports = {
+	Start, Redirect,
+
+	GetInfo, CreateSSH, RevokeSSH,
+};
+// ####################################################################################################

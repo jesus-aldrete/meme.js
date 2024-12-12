@@ -1,0 +1,80 @@
+class {
+	View () {
+		& (blur)=onBlur>{this.body}
+	}
+	Style() {
+		@theme-dark
+			--back   : $!soft|#2e2e2e
+			--hr-back: $!soft_60|#585858
+
+		background-color: $back
+		box-shadow      : 0 0 10 rgba(0, 0, 0, .5)
+		display         : none
+		flex-direction  : column
+		gap             : 5
+		outline         : none
+		padding         : 5
+		position        : absolute
+		z-index         : 3
+		>hr
+			background-color: $hr-back
+			border          : none
+			display         : list-item
+			height          : 1
+			margin          : 0 5
+		>.mx_button
+			justify-content: flex-start
+
+		&._view:>display:flex
+	}
+
+	// front-public
+	Create() {
+		this.Atts( 'tabindex', 1 );
+		this.Events([
+			{ event:'contextmenu', element:this.parentNode, callback:onContextMenu },
+		]);
+	}
+
+	// front-public
+	get view(     ) { return props.view || false }
+	set view( val ) {
+		props.view = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class( '_view', props.view );
+	}
+
+	// front-private
+	onContextMenu( event ) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		if ( this.view ) {
+			clearTimeout( props.timer );
+		}
+
+		let res;
+
+		if ( this.Validate ) res = this.Validate( event );
+		if ( res===false   ) return;
+
+		this.view = true;
+		const pos = this.offsetParent.Position( 'off' );
+		const per = this.Position();
+		let   top = event.clientY - pos.top;
+		let   lef = event.clientX - pos.left;
+
+		if ( (top + per.height)>pos.height ) top-= per.height;
+		if ( (lef + per.width )>pos.width  ) lef-= per.width ;
+
+		this.style.top  = `${top}px`;
+		this.style.left = `${lef}px`;
+
+		this.Focus();
+	}
+	onBlur       (       ) {
+		props.timer = setTimeout( ()=>{
+			this.view = false;
+		}, 50 );
+	}
+}
