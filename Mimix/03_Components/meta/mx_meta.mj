@@ -1,0 +1,45 @@
+class {
+	// configuration
+	static version = '0.0.1';
+	static require = false;
+
+	// front-public
+	Tag() {
+		const props = this.props;
+		let   res   = '';
+
+		if ( props.utf8     ?? true ) res+= {mh meta charset="UTF-8"/};
+		if ( props.viewport ?? true ) res+= {mh meta name="viewport" content="width=device-width"/};
+
+		if ( props.color       ) res+= {mh meta name="theme-color" content="{props.color}"};
+		if ( props.title       ) res+= {mh title>{props.title}};
+		if ( props.description ) res+= {mh meta name="description" content="{props.description}"/}
+		if ( props.favicon     ) res+= {mh link rel="icon" type="image/svg+xml" href="{props.favicon}"/};
+		if ( props.canonical   ) res+= {mh link rel="canonical" href="{props.canonical}"/};
+
+		if ( props.image ) {
+			res+= {mh
+				meta name="twitter:image" content="{props.image}"/
+				meta name="twitter:card"  content="summary_large_image"/
+			};
+
+			if ( props.site        ) res+= {mh meta name="twitter:site"        content="{props.site       }"/};
+			if ( props.title       ) res+= {mh meta name="twitter:title"       content="{props.title      }"/};
+			if ( props.creator     ) res+= {mh meta name="twitter:creator"     content="{props.creator    }"/};
+			if ( props.description ) res+= {mh meta name="twitter:description" content="{props.description}"/};
+
+			res+= {mh
+				meta property="og:image" content="{props.image}"/
+				meta property="og:type" content="website"/
+				meta property="og:locale" content="es_ES"/
+			};
+
+			if ( props.canonical   ) res+= {mh meta property="og:url"         content="{props.canonical  }"/};
+			if ( props.name        ) res+= {mh meta property="og:site_name"   content="{props.name       }"/};
+			if ( props.title       ) res+= {mh meta property="og:title"       content="{props.title      }"/};
+			if ( props.description ) res+= {mh meta property="og:description" content="{props.description}"/};
+		}
+
+		return res;
+	}
+}
