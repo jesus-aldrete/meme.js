@@ -12,6 +12,7 @@ const vm                                              = require( 'node:vm'      
 const zlib                                            = require( 'node:zlib'              );
 const http                                            = require( 'node:http'              );
 const http2                                           = require( 'node:http2'             );
+const orm                                             = require( '../02_Libs/orm'         );
 const transpilers                                     = require( '../02_Libs/transpilers' );
 const { ConnectClient                               } = require( '../02_Libs/courier'     );
 const { LoadConfig, GetPortDriver, GetIdProject     } = require( '../02_Libs/config'      );
@@ -35,6 +36,7 @@ let   ID             ;
 let   ETAG           ;
 let   CONFIG         ;
 let   DRIVER         ;
+let   REFS           = {};
 let   REFRESHER      = [];
 let   CACHE_URL      = {};
 let   IS_LOAD        = false;
@@ -309,11 +311,11 @@ async function Load( project ) {
 			let ofile;
 
 			switch ( clase ) {
-				case 'config'   : ofile = ParsePath( __dirname, '..', '02_Libs' , 'config.js'    ); break;
-				case 'lib'      : ofile = ParsePath( __dirname, '..', '02_Libs' , 'lib.js'       ); break;
-				case 'log'      : ofile = ParsePath( __dirname, '..', '02_Libs' , 'log.js'       ); break;
-				case 'transpile': ofile = ParsePath( __dirname, '..', '02_Libs' , 'transpile.js' ); break;
-				case 'courier'  : ofile = ParsePath( __dirname, '..', '03_Execs', 'courier.js'   ); break;
+				case 'config'   : ofile = ParsePath( __dirname, '..', '02_Libs', 'config.js'    ); break;
+				case 'lib'      : ofile = ParsePath( __dirname, '..', '02_Libs', 'lib.js'       ); break;
+				case 'log'      : ofile = ParsePath( __dirname, '..', '02_Libs', 'log.js'       ); break;
+				case 'transpile': ofile = ParsePath( __dirname, '..', '02_Libs', 'transpile.js' ); break;
+				case 'courier'  : ofile = ParsePath( __dirname, '..', '02_Libs', 'courier.js'   ); break;
 			}
 
 			ofile && ( ofile.is_lib=true );
@@ -451,6 +453,10 @@ async function Load( project ) {
 		/* Eventos */
 		function onChangeFiles( ofile ) {
 			clearTimeout( timer );
+
+			const i = CONFIG.ignore.some( regex => ofile.path.match( regex ) );
+
+			if ( i ) return;
 
 			timer = setTimeout( () => {
 				ViewFiles();
@@ -692,6 +698,80 @@ async function Load( project ) {
 			);
 		};return Inicio();
 	}
+	function WriteStyles( ofile ) {
+		let styles = '';
+
+		for ( const [id,style] of Object.entries( ofile.pre_render.styles ) ) {
+			styles+= `<style id="${id}">${style}</style>\n`;
+		}
+
+		if ( ofile.code.match( /<\/head>/gmi ) ) return ofile.code.replace( /<\/head>/gmi, `${styles}\n</head>` );
+		else                                     return styles + ofile.code;
+	}
+	function WriteImports( ohtml ) {
+		let   ret       = '';
+		const ya        = {};
+		const view_deps = ( ohtml ) => {
+			let is_deps = false;
+
+			for ( const [key,value] of Object.entries( ohtml.imports ) ) {
+				if ( value.find( v=>!v.not_require ) ) {
+					const ofile = URLS[`/${key}.js`];
+
+					if ( !ofile || ya[ofile.path] ) {
+						if ( !ya[ofile?.path] ) {
+							console.Error( `no se encontro la importacion "${ key }"` );
+						}
+
+						continue;
+					}
+
+					ya[ofile.path] = ofile;
+
+					view_deps( ofile );
+				}
+			}
+
+			if ( ohtml.struct.extends_class ) {
+				const ofile = URLS[`/${ohtml.struct.extends_class}.js`];
+
+				if ( ofile ) {
+					if ( Object.keys( ofile.struct.functions || {} ).length || Object.keys( ofile.struct.getters_setters || {} ).length ) {
+						ret+= `\n\timport {} from '${ CONFIG.constants.APP }/${ ofile.struct.class_name }_pre.js';`;
+
+						if ( view_deps( ofile ) ) {
+							is_deps = true;
+						}
+					}
+				}
+			}
+
+			if (
+				is_deps ||
+				Object.keys( ohtml.struct.variables            || {} ).length ||
+				Object.keys( ohtml.struct.functions            || {} ).length ||
+				Object.keys( ohtml.struct.getters_setters      || {} ).length ||
+				Object.keys( ohtml.struct.view?.struct?.events || {} ).length
+			) {
+				ret    += `\n\timport {} from '${ CONFIG.constants.APP }/${ ohtml.struct.class_name }_pre.js';`;
+				is_deps = true;
+			}
+
+			return is_deps;
+		};
+
+		view_deps( ohtml );
+
+		if ( ret )  {
+			ret = (
+				'\n<script type="module">' +
+					ret +
+				'\n</script>'
+			);
+		}
+
+		return ohtml.code + ret;
+	}
 	function RequireMeme( lib ) {
 		return FILES[`meme:${lib}`]?.exports;
 	}
@@ -711,8 +791,9 @@ async function Load( project ) {
 		node_modules.id       = oparse.path;
 		node_modules.filename = oparse.path;
 
-		oparse.struct = await TRANSPILERS.ParseMJ    ( oparse.Read(), oparse );
-		oparse.code   = await TRANSPILERS.WriteModule( oparse.struct, oparse );
+		oparse.struct = await TRANSPILERS.ParseMJ    ( oparse.Read(), oparse              );
+		oparse.code   = await TRANSPILERS.WriteModule( oparse.struct, oparse              );
+		oparse.code   = await TRANSPILERS.WriteMapLib( oparse.data  , oparse.code, oparse );
 
 		try {
 			node_modules._compile( `module.return=eval( ${ JSON.stringify( oparse.code ) } )`, oparse.path );
@@ -729,27 +810,61 @@ async function Load( project ) {
 	async function ExecScripts( code, params, ofile ) {
 		try {
 			return await Object.getPrototypeOf( async function() {} )
-			.constructor( 'require', 'require_meme', code )
+			.constructor( 'require', 'require_meme', 'refs', code )
 			.call(
 				{
-					urls            : URLS          ,
-					files           : FILES         ,
-					config          : CONFIG        ,
-					driver          : DRIVER        ,
-					compilers       : TRANSPILERS   ,
-					modified_files  : MODIFIED_FILES,
-					compile_function: Compile       ,
+					urls            : URLS            ,
+					files           : FILES           ,
+					config          : CONFIG          ,
+					driver          : DRIVER          ,
+					compilers       : TRANSPILERS     ,
+					modified_files  : MODIFIED_FILES  ,
+					compile_function: Compile         ,
 					hash_load       ,
 					...params       ,
 				},
 				require,
-				require_meme
+				require_meme,
+				REFS[ofile.name]
 			).catch( e => { throw e });
 		}
 		catch ( e ) {
 			ofile && console.Error( ofile.path );
 
 			console.Error( e.stack );
+		}
+	}
+	async function ExecClouds( clouds, ofile ) {
+		global.cirromatic??= await ConnectClient( CONFIG.cirromatic ).catch( e => console.Error( e ) );
+
+		if ( global.cirromatic ) {
+			const res = await global.cirromatic.Trigger( 'CirroMatic/clouds/install', CONFIG.constants.work_space.path, clouds );
+
+			if      ( !res       ) console.Error( (new meme_error( 'bad event', 'no fue posible instalar las clouds' )).cmd() );
+			else if (  res.error ) console.Error( res.console );
+			else                   console.Info( `clouds fg[instaladas] correctamente` );
+		}
+		else console.Error( (new meme_error( 'bad connection', 'error al instalar las clouds' )).cmd() );
+
+		const rec = ( parent, item ) => {
+			for (  const it of item?.childs||[] ) rec( item, it );
+			if  ( !item.ref                     ) return;
+
+			switch ( item.type ) {
+				case 'table':
+					REFS.global                ??= {};
+					ofile.clouds_refs          ??= {};
+					REFS[ofile.name]           ??= {};
+					ofile.clouds_refs[item.name] =
+					REFS[ofile.name ][item.name] = orm( CONFIG.constants.work_space.path, parent, item );
+				break;
+
+				default: console.Error( (new meme_error( 'bad case', `el elemento de tipo: "${item.type}"` )).cmd() );
+			}
+		};
+
+		for ( const item of clouds ) {
+			rec( {}, item );
 		}
 	}
 	async function RenderFile( ofile, ctx ) {
@@ -1187,9 +1302,16 @@ async function Load( project ) {
 			if ( !ofile ) return;
 
 			for ( const slot of ( all_elements_groups.slot || [] ) ) {
-				if ( !slot.body ) continue;
+				if ( !slot.body && !slot.childs.length ) continue;
 
-				cache_slots[slot.slot_hash+slot.id] = slot.body;
+				let code = '';
+
+				if ( slot.childs.length ) {
+					code = await TRANSPILERS.WriteMH({ type:1, childs:slot.childs, is_view:true }, ofile, ofile.struct.class_name );
+					code = await TRANSPILERS.TranspileEnd( code, ofile );
+				}
+
+				cache_slots[slot.slot_hash+slot.id] = slot.body+code;
 			}
 
 			const result = await ExecClase( ofile, element, body );
@@ -1318,10 +1440,10 @@ async function Load( project ) {
 			let name_functions = '';
 
 			for ( const ofile of Object.values( files_of_server ) ) {
-				if ( ofile.struct?.is_tcp_class || ofile.struct?.is_socket_class || ofile.struct?.is_edge_class ) {
+				if ( ofile.struct?.is_rest_class || ofile.struct?.is_socket_class || ofile.struct?.is_edge_class ) {
 					for ( const func of Object.values( ofile.struct.functions ) ) {
 						let name = func.class_and_name;
-						let type = ofile.struct.is_tcp_class ? 1 : ( ofile.struct.is_socket_class ? 2 : 3 );
+						let type = ofile.struct.is_rest_class ? 1 : ( ofile.struct.is_socket_class ? 2 : 3 );
 
 						if ( name[0]==='/' ) name = name.slice( 1 );
 
@@ -1346,75 +1468,6 @@ async function Load( project ) {
 		}
 
 		/* Write */
-		function WriteStyles( ofile ) {
-			let styles = '';
-
-			for ( const [id,style] of Object.entries( ofile.pre_render.styles ) ) {
-				styles+= `<style id="${id}">${style}</style>\n`;
-			}
-
-			if ( ofile.code.match( /<\/head>/gmi ) ) return ofile.code.replace( /<\/head>/gmi, `${styles}\n</head>` );
-			else                                     return styles + ofile.code;
-		}
-		function WriteImports( ohtml ) {
-			let   ret       = '';
-			const ya        = {};
-			const view_deps = ( ohtml ) => {
-				let is_deps = false;
-
-				for ( const [key,value] of Object.entries( ohtml.imports ) ) {
-					if ( value.find( v=>!v.not_require ) ) {
-						const ofile = URLS[`/${key}.js`];
-
-						if ( !ofile || ya[ofile.path] ) {
-							if ( !ya[ofile?.path] ) {
-								console.Error( `no se encontro la importacion "${ key }"` );
-							}
-
-							continue;
-						}
-
-						ya[ofile.path] = ofile;
-
-						view_deps( ofile );
-					}
-				}
-
-				if ( ohtml.struct.extends_class ) {
-					const ofile = URLS[`/${ohtml.struct.extends_class}.js`];
-
-					if ( ofile ) {
-						if ( Object.keys( ofile.struct.functions || {} ).length || Object.keys( ofile.struct.getters_setters || {} ).length ) {
-							ret+= `\n\timport {} from '${ CONFIG.constants.APP }/${ ofile.struct.class_name }_pre.js';`;
-
-							if ( view_deps( ofile ) ) {
-								is_deps = true;
-							}
-						}
-					}
-				}
-
-				if ( is_deps || Object.keys( ohtml.struct.functions || {} ).length || Object.keys( ohtml.struct.getters_setters || {} ).length ) {
-					ret    += `\n\timport {} from '${ CONFIG.constants.APP }/${ ohtml.struct.class_name }_pre.js';`;
-					is_deps = true;
-				}
-
-				return is_deps;
-			};
-
-			view_deps( ohtml );
-
-			if ( ret )  {
-				ret = (
-					'\n<script type="module">' +
-						ret +
-					'\n</script>'
-				);
-			}
-
-			return ohtml.code + ret;
-		}
-
 		async function WriteMC( ofile ) {
 			ofile.code = await TRANSPILERS.WriteMC( ofile.struct, ofile );
 		}
@@ -1468,7 +1521,6 @@ async function Load( project ) {
 				};
 
 				ofile.code = await TRANSPILERS.WriteMH( ofile.struct, ofile );
-				ofile.code = ofile.code.replace( /\<\/head\>/gmi, '<script>window._global_slots??={}</script></head>' );
 				ofile.code = WriteStyles ( ofile );
 				ofile.code = WriteImports( ofile );
 			}
@@ -1520,7 +1572,7 @@ async function Load( project ) {
 			ConfigureConfig( CONFIG );
 		}
 
-		TRANSPILERS.Configure({ config:CONFIG, address:project.address, exec:ExecScripts });
+		TRANSPILERS.Configure({ config:CONFIG, address:project.address, exec:ExecScripts, cloud:ExecClouds });
 		Watch();
 
 		cache                     = Cache();
@@ -1529,8 +1581,15 @@ async function Load( project ) {
 		const defaults            = ParsePath( __dirname, '..', '04_Defaults' );
 		const ya                  = {};
 		const start_compile       = performance.now();
+		TRANSPILERS.Prerender     = Prerender;
 		TRANSPILERS.FilesCache    = cache;
 		TRANSPILERS.RequireMeme   = RequireMeme;
+		TRANSPILERS.WriteStyles   = WriteStyles;
+		TRANSPILERS.WriteImports  = WriteImports;
+
+		for ( const key in CONFIG.requires ) {
+			await RequireMemeBuild( key );
+		}
 
 		for ( const source of CONFIG.sources )  {
 			for ( const ofile of source.Travel({ filter:CONFIG.filter, ignore:CONFIG.ignore }) ) {
@@ -1548,7 +1607,7 @@ async function Load( project ) {
 			}
 		}
 
-		for ( const ofile of CONFIG.constants.work_space.Travel({ filter:[/\.conf$/] }) ) {
+		for ( const ofile of CONFIG.constants.work_space.Travel({ filter:[/\.conf$/], ignore:CONFIG.ignore }) ) {
 			await Compile( ofile, false, ya );
 		}
 

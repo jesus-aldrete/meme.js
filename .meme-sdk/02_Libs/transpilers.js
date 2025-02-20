@@ -17,8 +17,8 @@ const {
 /* Constantes */
 const cxCSS         = 1, cxHTML         = 2, cxJS        = 3, cxBuild      = 4, cxRequest = 5, cxPointer    = 6, cxWrite       = 7;
 const thNone        = 1, thTag          = 2, thDoctype   = 3, thScript     = 4;
-const tcProperty    = 1, tcSelector     = 2, tcKeyframes = 3, tcFontface   = 4, tcMedia   = 5, tcScript     = 6, tcExclude     = 7, tcThemeDark     = 8, tcThemeLight = 9;
-const tzFrontPublic = 1, tzFrontPrivate = 2, tzBackEdge  = 3, tzBackSocket = 4, tzBackTcp = 5, tzBackPublic = 6, tzBackPrivate = 7, tzConfiguration = 8;
+const tcProperty    = 1, tcSelector     = 2, tcKeyframes = 3, tcFontface   = 4, tcMedia    = 5, tcScript     = 6, tcExclude     = 7, tcThemeDark     = 8, tcThemeLight = 9;
+const tzFrontPublic = 1, tzFrontPrivate = 2, tzBackEdge  = 3, tzBackSocket = 4, tzBackRest = 5, tzBackPublic = 6, tzBackPrivate = 7, tzConfiguration = 8;
 
 const tagIgnore = {
 	'feOffset'      : 1,
@@ -409,6 +409,7 @@ function GetRegExp( res, cad, pos ) {
 module.exports = function() {
 	/* Declaraciones */
 	let EXEC   ;
+	let CLOUD  ;
 	let CONFIG ;
 	let ADDRESS;
 	let IDS    = 0;
@@ -417,12 +418,13 @@ module.exports = function() {
 
 
 	/* Funciones */
-	function Configure({ config, address, exec, include_core }) {
+	function Configure({ config, address, exec, cloud, include_core }) {
 		CORE = include_core ?? true;
 
 		if ( CONFIG || ( !config && !address && !exec ) ) return;
 
 		EXEC    = exec;
+		CLOUD   = cloud;
 		CONFIG  = config;
 		ADDRESS = address;
 
@@ -537,10 +539,11 @@ module.exports = function() {
 					cad[pos + 2]==='c' &&
 					cad[pos + 3]==='k' &&
 					cad[pos + 4]==='-' &&
-					cad[pos + 5]==='t' &&
-					cad[pos + 6]==='c' &&
-					cad[pos + 7]==='p' &&
-					IsSpacesLine( cad, pos + 8 )
+					cad[pos + 5]==='r' &&
+					cad[pos + 6]==='e' &&
+					cad[pos + 7]==='s' &&
+					cad[pos + 8]==='t' &&
+					IsSpacesLine( cad, pos + 9 )
 				)
 				||
 				(
@@ -629,6 +632,23 @@ module.exports = function() {
 			for (      ; pos<cad.length && IsSpaces     ( cad, pos ); pos++ );
 
 			return cad[pos]==='(';
+		}
+		function IsCloudFunction( cad, pos ) {
+			if (
+				!(
+					cad[pos    ]==='C' &&
+					cad[pos + 1]==='l' &&
+					cad[pos + 2]==='o' &&
+					cad[pos + 3]==='u' &&
+					cad[pos + 4]==='d' &&
+					( ( pos + 5 )>=cad.length || IsSpecial( cad, pos + 5 ) ) &&
+					( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
+				)
+			) return false;
+
+			for ( pos+= 5; pos<cad.length && ( IsSpaces( cad, pos ) || cad[pos]==='(' || cad[pos]===')' ); pos++ );
+
+			return cad[pos]==='{';
 		}
 		function IsStyleFunction( cad, pos ) {
 			if (
@@ -916,7 +936,7 @@ module.exports = function() {
 							case 'front-public' : res+= '⟨fp'; break;
 							case 'front-private': res+= '⟨fv'; break;
 
-							case 'back-tcp'    : res+= '⟨bt'; break;
+							case 'back-rest'   : res+= '⟨br'; break;
 							case 'back-edge'   : res+= '⟨be'; break;
 							case 'back-socket' : res+= '⟨bs'; break;
 							case 'back-public' : res+= '⟨bp'; break;
@@ -990,8 +1010,88 @@ module.exports = function() {
 
 			return [res, pos];
 		}
+		async function GetCloudFunction( cad, pos ) {
+			for ( ;pos<cad.length && cad[pos]!=='{'; pos++ );
+
+			let code     ;
+			[code, pos]  = await GetJS( '', cad, pos, false, cxBuild );
+			const struct = await ParseMH( code, ofile );
+
+			pos++;
+
+			if ( typeof CLOUD==='function' ) {
+				let   res         = [];
+				const proc_childs = ( parent, element ) => {
+					parent = Object.assign(
+						{
+							type: element.tag,
+							name: element.id  || undefined,
+							ref : element.ref || undefined,
+						}
+						,
+						element.params
+					);
+
+					if ( element.childs.length ) {
+						parent.childs = [];
+
+						for ( const child of element.childs ) {
+							parent.childs.push( proc_childs( {}, child ) );
+						}
+					}
+
+					return parent;
+				};
+
+				for ( const child of struct.childs ) {
+					res.push( proc_childs( {}, child ) );
+				}
+
+				ofile.clouds.push( ...res );
+				await CLOUD( res, ofile );
+			}
+
+			return pos;
+		}
 
 		/* Get HTML */
+		function GetBodyBig( res, cad, pos ) {
+			let ret = '';
+
+			for_body:
+			for ( pos++; pos<cad.length; pos++ ) {
+				switch( cad[pos] ) {
+					case '\\':
+						switch ( cad[++pos] ) {
+							case 's' : ret+= "&nbsp;"; break;
+							case 'n' : ret+= "<br/>" ; break;
+							case 't' : ret+= "&emsp;"; break;
+
+							case '&': ret+= '&amp;' ; break;
+							case '<': ret+= '&lt;'  ; break;
+							case '>': ret+= '&gt;'  ; break;
+							case '"': ret+= '&quot;'; break;
+
+							default: ret+= '&#' + cad[pos].charCodeAt( 0 ) + ';';
+						}
+					break;
+
+					case '&': ret+= '&amp;' ; break;
+					case '<': ret+= '&lt;'  ; break;
+					case '"': ret+= '&quot;'; break;
+					case "'": ret+= '&#39;' ; break;
+
+					case '>': break for_body;
+
+					default: ret+= cad[pos];
+				}
+			}
+
+			ofile.groups[id=++IDS] = { body:ret };
+
+			return [res + `>⊂${id}⊃`, pos];
+		}
+
 		async function GetStyleTag( res, cad, pos ) {
 			for ( ;pos<cad.length && cad[pos]!=='{'; pos++ );
 
@@ -1029,7 +1129,7 @@ module.exports = function() {
 				fil.path===ofile.path ||
 				ofile.includes[fil.path]
 			) {
-				console.Error( `error, el archivo "${ fil.path }", no se incluyo.` );
+				console.Error( new meme_error( 'bad import', `error, el archivo "${ fil.path }", no se incluyo.` ).cmd() );
 				return '';
 			}
 
@@ -1287,8 +1387,9 @@ module.exports = function() {
 					break;
 
 					case 'C':
-						if      ( IsClass( cad, pos ) ) ofile.is_Class_in_js = true;
-						else if ( IsCss  ( cad, pos ) ) ofile.is_Css_in_js   = true;
+						if      ( IsClass        ( cad, pos ) ) ofile.is_Class_in_js = true;
+						else if ( IsCss          ( cad, pos ) ) ofile.is_Css_in_js   = true;
+						else if ( IsCloudFunction( cad, pos ) ) pos                  = await GetCloudFunction( cad, pos );
 
 						res+= cad[pos];
 					break;
@@ -1457,6 +1558,8 @@ module.exports = function() {
 					case '"':
 					case "'": [res, pos] = await GetString( res, cad, pos, cxHTML ); break;
 
+					case '<': [res, pos] = GetBodyBig( res, cad, pos ); break;
+
 					case '[':
 						if ( cad[pos+1]==='[' ) [res, pos] = await GetConstant( res, cad, pos );
 						else                    res       += cad[pos];
@@ -1514,6 +1617,7 @@ module.exports = function() {
 			ofile.includes  ??= {};
 			ofile.refreshers??= {};
 			ofile.groups    ??= {};
+			ofile.clouds    ??= [];
 			ofile.view      ??= '';
 			ofile.style     ??= '';
 
@@ -2148,6 +2252,13 @@ module.exports = function() {
 				for ( ;pos<cad.length && IsValidLetter( cad, pos ); nam+= cad[pos++] );
 				for ( ;pos<cad.length && IsSpaces     ( cad, pos ); pos++ );
 
+				if ( cad[pos]==='*' ) {
+					nam+= '*';
+					pos++;
+				}
+
+				for ( ;pos<cad.length && IsSpaces( cad, pos ); pos++ );
+
 				if ( cad[pos]==='=' ) {
 					for ( pos++; pos<cad.length && IsSpaces    ( cad, pos ); pos++ );
 					for (      ; pos<cad.length && IsValidValue( cad, pos ); val+= cad[pos++] );
@@ -2377,6 +2488,19 @@ module.exports = function() {
 
 			return [res, pos];
 		}
+		function GetBig( res, cad, pos ) {
+			let num = '';
+
+			for ( pos++; pos<cad.length && cad[pos]!=='⊃'; num+=cad[pos++] );
+
+			num = ofile.groups[num];
+
+			if ( num ) {
+				res+= num.body;
+			}
+
+			return [res, pos];
+		}
 		async function GetSub( res, cad, pos, parent ) {
 			let rel = '', con = true, sar;
 
@@ -2408,7 +2532,7 @@ module.exports = function() {
 			return [res + `❪${sub_struct.id}❫`, pos];
 		}
 		async function GetBody( cad, pos, parent ) {
-			let res = '', isg = false;
+			let res = '';
 
 			for ( pos++; pos<cad.length; pos++ ) {
 				switch ( cad[pos] ) {
@@ -2427,14 +2551,13 @@ module.exports = function() {
 						pos++;
 					break;
 
-					case '(': isg = true ; break;
-					case ')': isg = false; break;
+					case '⊂': [res, pos] = GetBig( res, cad, pos ); break;
 
 					case '[': [res, pos] = await GetSub( res, cad, pos, parent ); break;
 
 					case ';' :
 					case '\n':
-					case '\r': if ( !isg ) return [res, pos];
+					case '\r': return [res, pos];
 
 					default: res+= cad[pos];
 				}
@@ -2752,7 +2875,6 @@ module.exports = function() {
 
 			for ( ;pos<cad.length; pos++ ) {
 				switch ( cad[pos] ) {
-					case '(':
 					case '[': [res, pos] = GetGroup( res, cad, pos ); break;
 
 					case '\\':
@@ -2876,6 +2998,19 @@ module.exports = function() {
 				( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
 			);
 		}
+		function IsClassJS( cad, pos ) {
+			return (
+				cad[pos    ]==='c' &&
+				cad[pos + 1]==='l' &&
+				cad[pos + 2]==='a' &&
+				cad[pos + 3]==='s' &&
+				cad[pos + 4]==='s' &&
+				cad[pos + 5]==='j' &&
+				cad[pos + 6]==='s' &&
+				( ( pos + 7 )>=cad.length || IsSpecial( cad, pos + 7 ) ) &&
+				( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
+			);
+		}
 		function IsFunction( cad, pos ) {
 			const len = cad.length;
 
@@ -2980,6 +3115,13 @@ module.exports = function() {
 			return [res, pos];
 		}
 
+		function GetClassJS( res, cad, pos ) {
+			res+= 'class';
+			pos+= 6;
+
+			return [res, pos];
+		}
+
 		async function GetComment( cad, pos ) {
 			for ( pos+=2; pos<cad.length; pos++ ) {
 				switch ( cad[pos] ) {
@@ -3010,18 +3152,19 @@ module.exports = function() {
 				case 'End'   : struct.End   = result; break;
 				case 'Load'  : struct.Load  = result; break;
 				case 'Build' : struct.Build = result; break;
+				case 'Cloud' : struct.Cloud = result; break;
 
 				case 'Create':
 					switch ( zone ) {
 						case tzBackEdge   :
-						case tzBackTcp    :
+						case tzBackRest   :
 						case tzBackSocket :
 						case tzBackPublic :
 						case tzBackPrivate: result.name = 'MemeCreateService'; break;
 					}
 
 				default:
-					if ( result.name==='onGateway' && ( result.zone===tzBackTcp || result.zone===tzBackSocket ) ) result.name = 'onGateway' + ( result.zone===tzBackTcp ? 'Tcp' : 'Socket' );
+					if ( result.name==='onGateway' && ( result.zone===tzBackRest || result.zone===tzBackSocket ) ) result.name = 'onGateway' + ( result.zone===tzBackRest ? 'Rest' : 'Socket' );
 
 					result.class_and_name         = `${ struct.class_name }/${ result.name }`;
 					struct.functions[result.name] = result;
@@ -3036,7 +3179,7 @@ module.exports = function() {
 				case tzBackPublic :
 				case tzBackPrivate: struct.is_server_class = true; break;
 
-				case tzBackTcp   : struct.is_server_class = struct.is_tcp_class    = true; break;
+				case tzBackRest  : struct.is_server_class = struct.is_rest_class   = true; break;
 				case tzBackEdge  : struct.is_server_class = struct.is_edge_class   = true; break;
 				case tzBackSocket: struct.is_server_class = struct.is_socket_class = true; break;
 			}
@@ -3111,7 +3254,7 @@ module.exports = function() {
 							case 'fv': zon = tzFrontPrivate; break;
 
 							case 'be': zon = tzBackEdge   ; break;
-							case 'bt': zon = tzBackTcp    ; break;
+							case 'br': zon = tzBackRest   ; break;
 							case 'bs': zon = tzBackSocket ; break;
 							case 'bp': zon = tzBackPublic ; break;
 							case 'bv': zon = tzBackPrivate; break;
@@ -3205,8 +3348,9 @@ module.exports = function() {
 			for ( ;pos<cad.length; pos++ ) {
 				switch ( cad[pos] ) {
 					case 'c':
-						if ( prc && IsClass( cad, pos ) ) [res, pos] = await GetClass( res, cad, pos );
-						else                              res       += cad[pos];
+						if      ( prc && IsClassJS( cad, pos ) ) [res, pos] = GetClassJS    ( res, cad, pos );
+						else if ( prc && IsClass  ( cad, pos ) ) [res, pos] = await GetClass( res, cad, pos );
+						else                                     res       += cad[pos];
 					break;
 
 					case ' ' :
@@ -3930,9 +4074,9 @@ module.exports = function() {
 				if ( func.name==='onGateway' ) continue;
 
 				switch ( func.zone ) {
-					case tzBackTcp   : const_funcs+= '\n\tconst '+ func.name +' = _meme_protocol.Exec.bind(null,1,"'+ func.class_and_name +'");'; break;
-					case tzBackEdge  : const_funcs+= '\n\tconst '+ func.name +' = _meme_protocol.Exec.bind(null,3,"'+ func.class_and_name +'");'; break;
-					case tzBackSocket: const_funcs+= '\n\tconst '+ func.name +' = _meme_protocol.Exec.bind(null,2,"'+ func.class_and_name +'");'; break;
+					case tzBackRest  : const_funcs+= '\n\tconst '+ func.name +' = window._meme_protocol?.Exec.bind(null,1,"'+ func.class_and_name +'");'; break;
+					case tzBackEdge  : const_funcs+= '\n\tconst '+ func.name +' = window._meme_protocol?.Exec.bind(null,3,"'+ func.class_and_name +'");'; break;
+					case tzBackSocket: const_funcs+= '\n\tconst '+ func.name +' = window._meme_protocol?.Exec.bind(null,2,"'+ func.class_and_name +'");'; break;
 				}
 			}
 
@@ -4095,7 +4239,7 @@ module.exports = function() {
 				const { zone, is_static, name, value } = clase.variables[k];
 
 				switch ( zone ) {
-					case tzBackTcp   :
+					case tzBackRest  :
 					case tzBackEdge  :
 					case tzBackSocket:
 					case tzBackPublic:
@@ -4130,9 +4274,9 @@ module.exports = function() {
 						else             puf+= `\n\t/*f*/const ` + name + "=this." + name + "=" + ( is_async ? "async " : "" ) + "function" + params + body + ";this." + name + ".is_function_edge=true;";
 					break;
 
-					case tzBackTcp:
+					case tzBackRest:
 						if ( is_static ) pug+= `\n/*f*/static ` + ( is_async ? "async " : "" ) + name + params + body;
-						else             puf+= `\n\t/*f*/const ` + name + "=this." + name + "=" + ( is_async ? "async " : "" ) + "function" + params + body + ";this." + name + ".is_function_tcp=true;";
+						else             puf+= `\n\t/*f*/const ` + name + "=this." + name + "=" + ( is_async ? "async " : "" ) + "function" + params + body + ";this." + name + ".is_function_rest=true;";
 					break;
 
 					case tzBackSocket:
@@ -4159,6 +4303,12 @@ module.exports = function() {
 			return [res_general, res_functions];
 		}
 
+		function WriteRefs() {
+			if ( !ofile.clouds_refs || !Object.keys( ofile.clouds_refs ).length ) return '';
+
+			return `\tconst refs = global.refs["${ofile.name}"];`;
+		}
+
 		function WriteClass( res ) {
 			if ( !struct.is_server_class || ofile.is_module_exports ) return res;
 
@@ -4169,7 +4319,7 @@ module.exports = function() {
 
 			if ( !res_general && !res_functions ) return res;
 
-			return (
+			let result = (
 				res +
 				"\n" +
 				"module.exports = class {\n" +
@@ -4178,12 +4328,16 @@ module.exports = function() {
 					"\n" +
 					"/* METODOS */\n" +
 					"constructor() {\n" +
+						"const props = {};" +
+						WriteRefs() + "\n" +
 						res_functions + "\n" +
 						"\n" +
 						"\ttypeof MemeCreateService==='function' && MemeCreateService.call( this );\n" +
 					"}\n" +
 				"}"
 			);
+
+			return result;
 		}
 
 		/* Inicio */
@@ -4402,9 +4556,50 @@ module.exports = function() {
 			return (
 				generate +
 				`\n//# sourceMappingURL=data:application/json;base64,${ ( new Buffer.from( map ) ).toString( 'base64' ) }` +
-				`\n//# sourceURL=${ ofile.path }`
+				`\n//# sourceURL=${ encodeURIComponent( ofile.path ).replace( /%2F/g, '/' ) }`
 			);
 		};return await Inicio();
+	}
+	async function WriteMapLib( origin, generate, ofile ) {
+		/* GET */
+		function GetVLQS( cad, line ) {
+			let pos = 0, col = 0, res = '';
+
+			cad+= '\n';
+
+			for ( ;pos<cad.length; pos++ ) {
+				switch ( cad[pos] ) {
+					case '\r':
+					case '\n':
+						res += VlqEncode([ 0, 0, line, 0 ]) + ';';
+						line = 1;
+					break;
+				}
+			}
+
+			return res;
+		}
+
+		/* Inicio */
+		function Inicio() {
+			const vlqs = GetVLQS( generate, 0 );
+			const map  = (
+				`{` +
+					`"version"`        + `:3,`                   +
+					`"sources"`        + `:["${ ofile.path }"],` +
+					`"names"`          + `:[],`                  +
+					`"mappings"`       + `:"${ vlqs }",`         +
+					`"sourcesContent"` + `:["${ origin.replace( /\\/gm, '\\\\' ).replace( /\"/gm, '\\"' ) }"],` +
+					`"sourceRoot"`     + `:"${ ofile.path }"` +
+				`}`
+			).replace( /\n|\r/gm, '\\n' ).replace( /\t/gm, '\\t' );
+
+			return (
+				generate +
+				`\n//# sourceMappingURL=data:application/json;base64,${ ( new Buffer.from( map ) ).toString( 'base64' ) }` +
+				`\n//# sourceURL=${ encodeURIComponent( ofile.path ).replace( /%2F/g, '/' ) }`
+			);
+		};return Inicio();
 	}
 	async function WriteMapBuild( origin, generate, position, ofile ) {
 		/* Declaraciones */
@@ -4456,7 +4651,7 @@ module.exports = function() {
 			map = (
 				generate +
 				`\n//# sourceMappingURL=data:application/json;base64,${ ( new Buffer.from( map ) ).toString( 'base64' ) }` +
-				`\n//# sourceURL=${ ofile.path }`
+				`\n//# sourceURL=${ encodeURIComponent( ofile.path ).replace( /%2F/g, '/' ) }`
 			);
 
 			return map;
@@ -4503,6 +4698,7 @@ module.exports = function() {
 		WriteModule,
 
 		WriteMap,
+		WriteMapLib,
 	};
 	// **************************************************
 };

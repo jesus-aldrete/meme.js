@@ -270,7 +270,7 @@ function ConnectServer({ host, port, onEnd }) {
 		client.on( 'error', err   );
 	});
 }
-function ConnectClient({ port, host, onEnd }) {
+function ConnectClient({ host, port, onEnd }) {
 	/* Declaraciones */
 	let   client   ;
 	let   buffer   = '';

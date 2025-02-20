@@ -12,6 +12,7 @@ const http                                            = require( 'node:http'    
 const http2                                           = require( 'node:http2'             );
 const crypto                                          = require( 'node:crypto'            );
 const { isUtf8                                      } = require( 'node:buffer'            );
+const orm                                             = require( '../02_Libs/orm'         );
 const compilers                                       = require( '../02_Libs/transpilers' );
 const { ConnectClient                               } = require( '../02_Libs/courier'     );
 const { LoadConfig, GetPortDriver, GetIdProject     } = require( '../02_Libs/config'      );
@@ -35,11 +36,14 @@ const {
 let   ID            ;
 let   CONFIG        ;
 let   DRIVER        ;
+let   CIRROMATIC    ;
 const URLS          = {};
+const REFS          = {};
 const FILES         = {};
+const CLOUDS        = [];
 const COMPILERS     = compilers();
-const CACHE_URL     = { tcp:{}, socket:{} };
-const CACHE_GATEWAY = { tcp:[], socket:[] };
+const CACHE_URL     = { rest:{}, socket:{} };
+const CACHE_GATEWAY = { rest:[], socket:[] };
 // ####################################################################################################
 
 
@@ -92,6 +96,7 @@ async function Load( project ) {
 			switch ( clase ) {
 				case 'lib'      : ofile = ParsePath( __dirname, '..', '02_Libs', 'lib.js'       ); break;
 				case 'log'      : ofile = ParsePath( __dirname, '..', '02_Libs', 'log.js'       ); break;
+				case 'orm'      : ofile = ParsePath( __dirname, '..', '02_Libs', 'orm.js'       ); break;
 				case 'config'   : ofile = ParsePath( __dirname, '..', '02_Libs', 'config.js'    ); break;
 				case 'courier'  : ofile = ParsePath( __dirname, '..', '02_Libs', 'courier.js'   ); break;
 				case 'transpile': ofile = ParsePath( __dirname, '..', '02_Libs', 'transpile.js' ); break;
@@ -242,7 +247,10 @@ async function Load( project ) {
 				await RequireMemeAsync( key );
 			}
 		}
-		else oparse.code = oparse.Read();
+		else {
+			oparse.code = oparse.Read();
+			oparse.code = await COMPILERS.WriteMapLib( oparse.data, oparse.code, oparse );
+		}
 
 		try {
 			node_modules._compile( `module.return=eval( ${ JSON.stringify( oparse.code ) } )`, oparse.path );
@@ -256,10 +264,10 @@ async function Load( project ) {
 
 		return null;
 	}
-	async function ExecScripts( code, params ) {
+	async function ExecScripts( code, params, ofile ) {
 		try {
 			return await Object.getPrototypeOf( async function() {} )
-			.constructor( 'require', 'require_meme', code )
+			.constructor( 'require', 'require_meme', 'refs', code )
 			.call(
 				{
 					files     : FILES    ,
@@ -270,11 +278,46 @@ async function Load( project ) {
 					...params            ,
 				},
 				require,
-				require_meme
+				require_meme,
+				REFS[ofile.name]
 			).catch( e => { throw e });
 		}
 		catch ( e ) {
 			console.Error( e.stack );
+		}
+	}
+	async function ExecCloud( clouds, ofile ) {
+		CIRROMATIC      ??= await ConnectClient( CONFIG.cirromatic ).catch( e => console.Error( e ) );
+		global.cirromatic = CIRROMATIC;
+
+		if ( CIRROMATIC ) {
+			const res = await CIRROMATIC.Trigger( 'CirroMatic/clouds/install', CONFIG.constants.work_space.path, clouds );
+
+			if      ( !res       ) console.Error( (new meme_error( 'bad event', 'no fue posible instalar las clouds' )).cmd() );
+			else if (  res.error ) console.Error( res.console );
+			else                   console.Info( `clouds fg[instaladas] correctamente` );
+		}
+		else console.Error( (new meme_error( 'bad connection', 'error al instalar las clouds' )).cmd() );
+
+		const rec = ( parent, item ) => {
+			for (  const it of item?.childs||[] ) rec( item, it );
+			if  ( !item.ref                     ) return;
+
+			switch ( item.type ) {
+				case 'table':
+					REFS.global                ??= {};
+					ofile.clouds_refs          ??= {};
+					REFS[ofile.name]           ??= {};
+					ofile.clouds_refs[item.name] =
+					REFS[ofile.name ][item.name] = orm( CONFIG.constants.work_space.path, parent, item );
+				break;
+
+				default: console.Error( (new meme_error( 'bad case', `el elemento de tipo: "${item.type}"` )).cmd() );
+			}
+		};
+
+		for ( const item of clouds ) {
+			rec( {}, item );
 		}
 	}
 	async function Compile( oparse, ya ) {
@@ -335,6 +378,7 @@ async function Load( project ) {
 			URLS[oparse.url] = oparse;
 
 			if ( !oparse.struct.statics.url ) oparse.struct.statics.url = { is_static:true, name:'url', zone:7, value:oparse.url };
+			if (  project.no_exec           ) return;
 
 			/*/ ***** Load ***** /*/
 			oparse.code = await COMPILERS.WriteModule( oparse.struct, oparse              );
@@ -514,7 +558,7 @@ async function Load( project ) {
 
 			for ( const ofile of Object.values( URLS  ) ) !ofile.is_null && !ofile.is_repo && !ofile.is_lib && !files[ofile.path] && changs.delete.push( ofile );
 			for ( const ofile of Object.values( files ) ) {
-				if ( !ofile.Read().match( /(\/\/\s*(back-private|back-public|back-tcp|back-socket|back-edge)(\n|\r))|(\bmodule\.exports\b\s*\=)/ ) ) continue;
+				if ( !ofile.Read().match( /(\/\/\s*(back-private|back-public|back-rest|back-socket|back-edge)(\n|\r))|(\bmodule\.exports\b\s*\=)/ ) ) continue;
 
 				let ffile;
 
@@ -534,12 +578,12 @@ async function Load( project ) {
 				await DeleteFiles( changs.delete );
 				await ModifyFiles( changs.modify );
 
-				CACHE_URL    .tcp = {}, CACHE_URL    .socket = {};
-				CACHE_GATEWAY.tcp = [], CACHE_GATEWAY.socket = [];
+				CACHE_URL    .rest = {}, CACHE_URL    .socket = {};
+				CACHE_GATEWAY.rest = [], CACHE_GATEWAY.socket = [];
 
 				for ( const ofile of Object.values( URLS ) ) {
-					if ( ofile.module_instance?.onGatewayTcp?.is_function_tcp===true ) {
-						CACHE_GATEWAY.tcp.push( ofile.module_instance.onGatewayTcp );
+					if ( ofile.module_instance?.onGatewayRest?.is_function_rest===true ) {
+						CACHE_GATEWAY.rest.push( ofile.module_instance.onGatewayRest );
 					}
 
 					if ( ofile.module_instance?.onGatewaySocket?.is_function_socket===true ) {
@@ -581,13 +625,16 @@ async function Load( project ) {
 		await ReadConfig( project );
 
 		cache                        = Cache();
+		global   .refs               = REFS;
 		global   .require_meme       = RequireMeme;
 		global   .require_meme_build = RequireMemeAsync;
+		global   .ExecScripts        = ExecScripts;
 		COMPILERS.cache              = cache;
 		COMPILERS.RequireMeme        = RequireMemeAsync;
 
-		COMPILERS.Configure({ config:CONFIG, address:project.address, exec:ExecScripts });
-		Watch();
+		COMPILERS.Configure({ config:CONFIG, address:project.address, exec:ExecScripts, cloud:ExecCloud });
+
+		!project.no_watch && Watch();
 
 		const ya          = {};
 		const perf        = performance.now();
@@ -606,12 +653,12 @@ async function Load( project ) {
 		console.Info( `cd[Tiempo total de la carga:] fc[${ performance.now() - perf }]` );
 
 		/* Reset cache */
-		CACHE_URL    .tcp = {}, CACHE_URL    .socket = {};
-		CACHE_GATEWAY.tcp = [], CACHE_GATEWAY.socket = [];
+		CACHE_URL    .rest = {}, CACHE_URL    .socket = {};
+		CACHE_GATEWAY.rest = [], CACHE_GATEWAY.socket = [];
 
 		for ( const ofile of Object.values( FILES ) ) {
-			if ( ofile.module_instance?.onGatewayTcp?.is_function_tcp===true ) {
-				CACHE_GATEWAY.tcp.push( ofile.module_instance.onGatewayTcp );
+			if ( ofile.module_instance?.onGatewayRest?.is_function_rest===true ) {
+				CACHE_GATEWAY.rest.push( ofile.module_instance.onGatewayRest );
 			}
 
 			if ( ofile.module_instance?.onGatewaySocket?.is_function_socket===true ) {
@@ -1542,8 +1589,8 @@ async function Connect( project ) {
 		const function_name = context.path[context.path.length - 1];
 		const url           =  '/' + context.path.slice( 1, -1 ).join( '/' );
 
-		if ( ( ofile=URLS[url] ) && ofile.module_instance?.[function_name]?.is_function_tcp ) {
-			CACHE_URL.tcp[context.url_method] = async ( c ) => {
+		if ( ( ofile=URLS[url] ) && ofile.module_instance?.[function_name]?.is_function_rest ) {
+			CACHE_URL.rest[context.url_method] = async ( c ) => {
 				c.file = ofile;
 
 				return {
@@ -1552,19 +1599,19 @@ async function Connect( project ) {
 				};
 			};
 
-			return await CACHE_URL.tcp[context.url_method].call( context, context );
+			return await CACHE_URL.rest[context.url_method].call( context, context );
 		}
 
-		CACHE_URL.tcp[context.url_method]=()=>({ _code:404 });
+		CACHE_URL.rest[context.url_method]=()=>({ _code:404 });
 
-		return CACHE_URL.tcp[context.url_method]();
+		return CACHE_URL.rest[context.url_method]();
 	}
 	async function ModuleResponse( context ) {
-		for ( const gateway of CACHE_GATEWAY.tcp )
+		for ( const gateway of CACHE_GATEWAY.rest )
 			if ( !await gateway.call( context, context ) ) return { _code:401 };
 
-		if ( CACHE_URL.tcp[context.url_method] )
-			return await CACHE_URL.tcp[context.url_method].call( context, context );
+		if ( CACHE_URL.rest[context.url_method] )
+			return await CACHE_URL.rest[context.url_method].call( context, context );
 
 		if ( context.path[0]==='function' )
 			return await ModuleResponseFunction( context );
@@ -1579,19 +1626,19 @@ async function Connect( project ) {
 				const nam = context.method;
 				const nap = context.path[index + 1];
 
-				if      ( fil.module_instance[nap]   ?.is_function_tcp ) fun = fil.module_instance[nap]   ;
-				else if ( fil.module_instance[nam]   ?.is_function_tcp ) fun = fil.module_instance[nam]   ;
-				else if ( fil.module_instance.Request?.is_function_tcp ) fun = fil.module_instance.Request;
+				if      ( fil.module_instance[nap]   ?.is_function_rest ) fun = fil.module_instance[nap]   ;
+				else if ( fil.module_instance[nam]   ?.is_function_rest ) fun = fil.module_instance[nam]   ;
+				else if ( fil.module_instance.Request?.is_function_rest ) fun = fil.module_instance.Request;
 
 				if ( typeof fun==='function' ) {
-					return await ( CACHE_URL.tcp[context.url_method]=fun ).call( context, context );
+					return await ( CACHE_URL.rest[context.url_method]=fun ).call( context, context );
 				}
 
 				break;
 			}
 		}
 
-		return ( CACHE_URL.tcp[context.url_method]=()=>({ _code:404 }) )();
+		return ( CACHE_URL.rest[context.url_method]=()=>({ _code:404 }) )();
 	}
 
 	/* Servicios */
@@ -1847,9 +1894,10 @@ function Inicio() {
 module.exports = async function( config, project ) {
 	ID     = project.id;
 	CONFIG = Object.assign( {}, config, config.api );
-	DRIVER = { Trigger:()=>{} };
+	DRIVER = await ConnectClient({ port:config.driver.cirromatic }).catch( e => console.Error( e ) );
 
-	await  Load  ( project );
-	return Server( project );
+	await Load( project );
+
+	return { config:CONFIG, compilers:COMPILERS, files:FILES, urls:URLS, clouds:CLOUDS };
 };
 // ####################################################################################################

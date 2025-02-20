@@ -32,5 +32,7 @@ function Inicio() {
 
 		setTimeout( Inicio, retry_interval );
 	};
+
+	window.addEventListener( 'beforeunload', ()=>event_source.close() );
 };Inicio();
 // ###################################################################################################

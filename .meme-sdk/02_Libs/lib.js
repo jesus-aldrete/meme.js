@@ -7,6 +7,7 @@
 const crt    = "-----BEGIN CERTIFICATE-----\nMIID5zCCAs+gAwIBAgIUfhinhFgpqmWQwG9IDJoPgEQ4YFswDQYJKoZIhvcNAQELBQAwgYIxCzAJBgNVBAYTAk1YMQ8wDQYDVQQIDAZNZXhpY28xDzANBgNVBAcMBk1leGljbzEQMA4GA1UECgwHbWVtZS5qczEQMA4GA1UECwwHbWVtZS5qczEQMA4GA1UEAwwHbWVtZS5qczEbMBkGCSqGSIb3DQEJARYMbWFpbkBtanMucmVkMB4XDTI0MDEyMjIwMjYzN1oXDTI1MDEyMTIwMjYzN1owgYIxCzAJBgNVBAYTAk1YMQ8wDQYDVQQIDAZNZXhpY28xDzANBgNVBAcMBk1leGljbzEQMA4GA1UECgwHbWVtZS5qczEQMA4GA1UECwwHbWVtZS5qczEQMA4GA1UEAwwHbWVtZS5qczEbMBkGCSqGSIb3DQEJARYMbWFpbkBtanMucmVkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA881B9hDHTSHyyJk/i0FQlsq97lmmuBtvh/LnpN7W9B6k0b57PM9ogePa5kE3E9iXDi533DWIuWdZ43grkGe5+thE1cZlpKp2pnOBGbzKKU1M0bS3n9as48wPRLB4qgl6y3kSJMPMHc/MmtC23W8xtZyPM3nzO7f7unGXYSECYyPBpUSmbL024cod1WfuKixD9Slm90rlgXKH89DhucLQtr/CRyNB0udgxWcpqtqMMyl4ElC2K0HKWWrKripTgLdNqeC1H+YL8ky2gL7TU6ZRsizcUB4qXA0SdGcHjGd1Efdm7C2zeDeRb5YRkCtHPpgq62XfCnKuTqxTaY/jV4BvrwIDAQABo1MwUTAdBgNVHQ4EFgQUS028TwiKkHWfWoDyn262HC4aB/wwHwYDVR0jBBgwFoAUS028TwiKkHWfWoDyn262HC4aB/wwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAKMSfD0F7HcEvGA0fj92S7UqLStpViDNyWqpDeWok5rqGcIVNdPhDgBBFhAA54w8IJuZgJ2U+MkRdFD/CRzrT2HtLAI4u8bKfeYdM+YiLlTbzvaZJkGYKLzanfAQzzDaLFm5RywnIylfDNiZDsfGzVOyRqPpvVTsGOxbl+WGh9PGG6+R+vCuYXdRVgTZPa4WV1FaE4PUuDhXUxb3lL6cIyMDptbO26GuWpFvbbi98gtldJb9dgi/Ucq2Owj2hun7w/fCV35gcWjyWJwvwBy8ngq5fTetxDWtJgNIBLJJibulMf9mTfssF7PhnzKdEUBd7l6QuCGd9/0psBv/V4kI2aw==\n-----END CERTIFICATE-----";
 const key    = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDzzUH2EMdNIfLImT+LQVCWyr3uWaa4G2+H8uek3tb0HqTRvns8z2iB49rmQTcT2JcOLnfcNYi5Z1njeCuQZ7n62ETVxmWkqnamc4EZvMopTUzRtLef1qzjzA9EsHiqCXrLeRIkw8wdz8ya0LbdbzG1nI8zefM7t/u6cZdhIQJjI8GlRKZsvTbhyh3VZ+4qLEP1KWb3SuWBcofz0OG5wtC2v8JHI0HS52DFZymq2owzKXgSULYrQcpZasquKlOAt02p4LUf5gvyTLaAvtNTplGyLNxQHipcDRJ0ZweMZ3UR92bsLbN4N5FvlhGQK0c+mCrrZd8Kcq5OrFNpj+NXgG+vAgMBAAECggEARFm/y+IxVfUWEVoxf/OMSfJGJFwbCxOaBaW6frUA04kB0VHTUB2f4YaFeLdA3z4CP3YUoXaawcvxXf3zTLVf5S0bw0kvduZZhFnukE4m6URkLIi7UEMJzoWHpEzLT3R/6iqjxQ3lnFgFN0QbeGIzsARX+2kNoaj3mHI/K/pqpms0RzFPLschtsHq/0uPRoUs0p1dnTUTwhzOBU3UqiBx0pR4/H2QxmGX7Rh2R+6SA4gld3UMcqDTh61U5WvjxZ3tuR0LKP9GujfxEgbPiR6hxLxwdNFdioFuhvlHNjliGa9hOYuqM4wAbUYVVCGM2xoehorYEdEkqMAIxtUDbkb0WQKBgQD9V73OykWnpRMEmE63IfCkH5dJO6bWyy4Dql+VXtTKJq2oL6AsufjTYN0PBDEBEKAeo+RD1HxEMLs3Fczfq1mxoP5L7cK2VnypZx4tnM7uEzdzzeWhk2pd4MOT3BGf9fGfoxTpRiAAJPbD+Ylds1iftjWgivkZKFEpXfs+fdg4WQKBgQD2W+XDbGb1VWVZd6M+ChYx+0j6Yjcp6eqzukSbtjmXsllZE7Uj79hNx0q88DsuGiO8NWxNOcQX/WI4CYTRWjcPDxS4Nb9h0jK/0g/P0GgCaVWLRKjtfnoalROIwzotfHmMyAzGqurLOn6bjFLbIo4f7ztshEr2d5Vcyp7VFSVnRwKBgHHluJf3qEkuldZDA2CiCaY/7awm/WMkBZPwTPjCobggm4I5pzF0isG9kqTlpYJtDw+3bzBvn06o+gJR8sG8L58EWk+YnSmMyI8ApTisfvvZ99xAfTSfKfr6yfL3xZS85dx3XTdjJ4/pDmgdD/zoXLexG3sJ/+OnlJWcgxAdU9BBAoGAdBlo1Ujv2GxPH/Oera0JOrLGeKDyiEEhh2Of05Xz3EaDjtQXyIDOehESaqn36ckN0DOI/3farseNkwUBX7vZOLKNvCYwNARgQD/ZjcEUUxaa5tALoCi7mG1q0EfY0fjYO31HcBS6I95ELj/aCEVnnysZ4RETVsWSUTF32sllYB8CgYB0tmBYLv5+ZyNSJYTF2UCmgBw18wrn5IxhmOVzuhmLFdi6LoXp5KUYrxX7SFR7V4nyFeehxoDMkeZHvr1ejqMLezJD5BQmCxfzfi7tnriKZW/YYTcWIZL3ZT4Td8xUv71skXuSnmbAdN46LJCcCMc+GlFrmV4rxihVGTA/wqYqsQ==\n-----END PRIVATE KEY-----";
 const fs     = require( 'node:fs'            );
+const net    = require( 'node:net'           );
 const path   = require( 'node:path'          );
 const http   = require( 'node:http'          );
 const https  = require( 'node:https'         );
@@ -482,6 +483,74 @@ function ExecCommand( cwd, command ) {
 
 	return { ok:true, message:result.stderr };
 }
+class meme_error extends Error {
+	constructor( type, message, code ) {
+		super( message );
+
+		this.name  =
+		this.error = type;
+
+		if ( code ?? false ) {
+			this.code = code;
+		}
+
+		Error.captureStackTrace( this, this.constructor );
+	}
+
+	cmd() {
+		let cad = this.stack;
+		let pos = 0;
+		let res = '\x1b[2m\x1b[31m';
+		let isd = false;
+		let isp = false;
+
+		for ( ;pos<cad.length; pos++ ) {
+			switch ( cad[pos] ) {
+				case '\n':
+					if ( isd ) res+='\n';
+					else       res+='\n\x1b[2m', isd=true;
+				break;
+
+				case ':' :
+					if      ( isp ) res+='\x1b[0m\x1b[2m:', isp=false;
+					else if ( isd ) res+=':';
+					else            res+='\x1b[0m\x1b[2m:\x1b[0m';
+				break;
+
+				case '(': res+='(\x1b[33m', isp=true; break;
+				default : res+= cad[pos];
+			}
+		}
+
+		res+= '\x1b[0m';
+
+		return res;
+	}
+
+	toJSON() {
+		return {
+			name   : this.name,
+			code   : this.code,
+			error  : this.error,
+			stack  : this.stack,
+			console: this.cmd(),
+			message: this.message,
+		};
+	}
+}
+/**
+ * Función que crea una instancia de un error personalizado.
+ *
+ * @param {string} type - Tipo de error.
+ * @param {string} message - Mensaje descriptivo del error.
+ * @param {number} code - Código de error que representa el problema específico.
+ * @returns {Error} - Instancia del error personalizado.
+ */
+function MemeError( type, message, code ) {
+	return new meme_error( type, message, code );
+}
+global.MemeError  = MemeError;
+global.meme_error = meme_error;
 // ####################################################################################################
 
 
@@ -947,6 +1016,29 @@ function ParseCookies( headers ) {
 	return res;
 }
 /**
+ * Encuentra un puerto libre en el rango especificado.
+ * @param {number} start - Puerto inicial del rango.
+ * @param {number} end - Puerto final del rango.
+ * @returns {Promise<number>} - Promesa que resuelve con un puerto libre.
+ */
+function GetFreePort ( start=20000, end=21000 ) {
+	return new Promise(
+		( run, err ) => {
+			const try_port = ( port ) => {
+				if ( port>end ) return err( new meme_error( 'bad search', 'No hay puertos libres disponibles' ) );
+
+				const server = net.createServer();
+
+				server.unref (                                   );
+				server.on    ( 'error', ()=>try_port( port + 1 ) );
+				server.listen( port   , ()=>{ server.close( ()=>run( port )) });
+			};
+
+			try_port( start );
+		}
+	);
+}
+/**
  * CustomReadableStream es una implementación personalizada de un flujo legible (Readable stream) de Node.js.
  * Proporciona un flujo de datos a partir de una entrada dada, fragmento por fragmento, con un tamaño especificado por fragmento.
  *
@@ -1029,6 +1121,7 @@ module.exports = {
 	StrToRegExp   ,
 	KillProcess   ,
 	ExecCommand   ,
+	MemeError     ,
 
 	EncodeBase64Url,
 	DecodeBase64Url,
@@ -1052,6 +1145,7 @@ module.exports = {
 	ParseParams         ,
 	ParseHeaders        ,
 	ParseCookies        ,
+	GetFreePort         ,
 	CustomReadableStream,
 };
 // ####################################################################################################

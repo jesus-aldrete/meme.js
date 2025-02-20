@@ -9,11 +9,11 @@ process.title = 'meme.js DRIVER';
 
 
 /* Importaciones */
-const http              = require( 'node:http'          );
-const http2             = require( 'node:http2'         );
-const { fork          } = require( 'node:child_process' );
-const { KillProcess   } = require( '../02_Libs/lib'     );
-const { ConnectServer } = require( '../02_Libs/courier' );
+const http                      = require( 'node:http'          );
+const http2                     = require( 'node:http2'         );
+const { fork                  } = require( 'node:child_process' );
+const { KillProcess, OpenLink } = require( '../02_Libs/lib'     );
+const { ConnectServer         } = require( '../02_Libs/courier' );
 
 const {
 	LoadConfig,
@@ -131,6 +131,10 @@ async function Start( project ) {
 		);
 
 		PaintServers();
+
+		if ( app.start && project.execs.includes( '-open' ) ) {
+			setTimeout( ()=>OpenLink( `${app.protocol}://${app.host}:${app.port}` ), 500 );
+		}
 	}
 
 	function PaintServers() {
@@ -553,6 +557,10 @@ module.exports = async function( project ) {
 
 		await Inicio( project.port, project.host );
 		await Start ( project                    );
+
+		if ( project.execs.includes( '-open' ) ) {
+			console.log( 11, project.app.port );
+		}
 	}
 
 	/* Inicio */

@@ -264,7 +264,8 @@ async function LoadConfigFile( ofile ) {
 		ofile.config = {};
 	}
 
-	constants.config = CombineConfigs( constants.config, ofile.config );
+	constants.config          = CombineConfigs( constants.config, ofile.config );
+	constants.config.requires = Object.assign( {}, constants.config.requires||{}, ofile.requires );
 
 	return ofile;
 }

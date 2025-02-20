@@ -4,7 +4,7 @@
 
 
 /* Declaraciones */
-const tcTCP=1, tcSocket=2, tcEdge=3;
+const tcREST=1, tcSocket=2, tcEdge=3;
 
 /* Funciones */
 function MemeProtocolHTTP( host ) {
@@ -145,7 +145,7 @@ function MemeProtocolHTTP( host ) {
 	}
 
 	// Metodos de ejecucion
-	async function ExecTCP( event, params ) {
+	async function ExecREST( event, params ) {
 		const result = await fetch(
 			`${host}/function/${event}`,
 			{
@@ -179,7 +179,7 @@ function MemeProtocolHTTP( host ) {
 	/* Metodos */
 	async function Exec( type, event, ...params ) {
 		switch ( type ) {
-			case tcTCP   : return await ExecTCP   ( event, params );
+			case tcREST  : return await ExecREST  ( event, params );
 			case tcSocket: return await ExecSocket( event, params );
 		}
 	}
