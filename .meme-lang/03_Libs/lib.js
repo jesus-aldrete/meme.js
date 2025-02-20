@@ -799,6 +799,70 @@ function Folding( documents, context ) {
 
 		return [sta, pos];
 	}
+	function GetCommentSeparateHTML( res, sta, cad, pos ) {
+		let lvl = 0, pot = pos;
+
+		for ( pot--; pot>=0 && IsSpacesTabs( cad, pot ); pot--, lvl++ );
+
+		if ( !IsSpacesLine( cad, pot ) ) return GetComment( res, sta, cad, pos );
+
+		const sin  = sta;
+		[sta, pos] = GetComment( [], sta, cad, pos );
+
+		for ( ;pos<cad.length && !IsSpacesLine( cad, pos ); pos++ );
+
+		for ( ;pos<cad.length; pos++ ) {
+			switch ( cad[pos] ) {
+				case '\\': if ( !IsSpacesLine( cad, pos+1 ) ) pos++; break;
+
+				case '\r':
+				case '\n':
+					pot     = pos;
+					let lvt = 0, stt = 0;
+
+					for ( ;pos<cad.length && IsSpacesLine( cad, pos ); pos++, stt++ );
+					for ( ;pos<cad.length && IsSpacesTabs( cad, pos ); pos++, lvt++ );
+
+					if ( lvl<lvt ) {
+						sta+= stt;
+						pos = pot + stt;
+					}
+					else {
+						if ( sin!=sta ) res.push({ start:sin, end:sta, kind:3 });
+
+						return [sta, pot - 1];
+					}
+				break;
+
+				case '<': [sta, pos] = GetBodyMulti( res, sta, cad, pos ); break;
+
+				case '"':
+				case "'": [sta, pos] = GetString( res, sta, cad, pos, cxHtm );
+
+				case '/':
+					if      ( IsCommentSeparate( cad, pos ) ) [sta, pos] = GetCommentSeparateHTML( res, sta, cad, pos );
+					else if ( IsComment        ( cad, pos ) ) [sta, pos] = GetComment            ( res, sta, cad, pos );
+				break;
+
+				case '[': [sta, pos] = FoldingHTM( res, sta, cad, pos ); break;
+
+				case '{':
+					switch ( IsScript( cad, pos, cxHtm ) ) {
+						case cxHtm: [sta, pos] = FoldingHTM( res, sta, cad, pos ); break;
+						case cxCss: [sta, pos] = FoldingCSS( res, sta, cad, pos ); break;
+						default   : [sta, pos] = FoldingJS ( res, sta, cad, pos ); break;
+					}
+				break;
+
+				case 's':
+				case 'S': if ( IsStyleTag( cad, pos ) ) [sta, pos] = GetStyle( res, sta, cad, pos ); break;
+			}
+		}
+
+		if ( sin!==sta ) res.push({ start:sin, end:sta, kind:3 });
+
+		return [sta, pos];
+	}
 	function GetCommentSeparateCSS( res, sta, cad, pos ) {
 		let lvl = 0, pot = pos;
 
@@ -1005,6 +1069,24 @@ function Folding( documents, context ) {
 
 		return [sta, pos];
 	}
+	function GetBodyMulti( res, sta, cad, pos ) {
+		const sin = sta;
+
+		for ( pos++; pos<cad.length; pos++ ) {
+			switch ( cad[pos] ) {
+				case '\\': pos++; break;
+
+				case '\n':
+				case '\r': sta++; break;
+
+				case '>':
+					if ( sin!==sta ) res.push({ start:sin, end:sta, kind:3 });
+				return [sta, pos];
+			}
+		}
+
+		return [sta, pos];
+	}
 	// **************************************************
 
 	/* Funciones */
@@ -1123,10 +1205,17 @@ function Folding( documents, context ) {
 				case '\n':
 				case '\r': sta++; break;
 
+				case '\\': if ( !IsSpacesLine( cad, pos+1 ) ) pos++; break;
+
+				case '<': [sta, pos] = GetBodyMulti( res, sta, cad, pos ); break;
+
 				case '"':
 				case "'": [sta, pos] = GetString( res, sta, cad, pos, cxHtm );
 
-				case '/': if ( IsComment( cad, pos ) ) [sta, pos] = GetComment( res, sta, cad, pos ); break;
+				case '/':
+					if      ( IsCommentSeparate( cad, pos ) ) [sta, pos] = GetCommentSeparateHTML( res, sta, cad, pos );
+					else if ( IsComment        ( cad, pos ) ) [sta, pos] = GetComment            ( res, sta, cad, pos );
+				break;
 
 				case '[': [sta, pos] = FoldingHTM( res, sta, cad, pos ); break;
 

@@ -86,6 +86,7 @@ repository:
   comments:
     patterns:
       - include: '#comments-line'
+      - include: '#comment-docs'
       - include: '#comments-block'
   comments-line:
     begin: \/\/
@@ -95,6 +96,22 @@ repository:
     begin: \/\*
     end  : \*\/
     name : comment.block.css.mh
+  comment-docs:
+    begin: '/\*/'
+    beginCaptures:
+      0:
+        name: punctuation.separator.key-value.mapping.yaml
+    end: '/?\*/'
+    endCaptures:
+      0:
+        name: punctuation.separator.key-value.mapping.yaml
+    patterns:
+      - match: '[A-z]'
+        name: string
+      - match: '[0-9]'
+        name: constant.numeric.decimal.js
+      - match: '[^A-z0-9]'
+        name: comment.block.documentation.js
 
   # SCRIPTS
   scripts:
@@ -240,6 +257,7 @@ repository:
           - include: '#variables'
           - include: '#scripts'
           - include: '#tag-body'
+          - include: '#tag-body-big'
           - include: '#tag-params'
 
       - begin: \&
@@ -252,6 +270,7 @@ repository:
           - include: '#variables'
           - include: '#scripts'
           - include: '#tag-body'
+          - include: '#tag-body-big'
           - include: '#tag-params'
 
       - begin: (?=[[:word:]]|\-)
@@ -261,6 +280,7 @@ repository:
           - include: '#variables'
           - include: '#scripts'
           - include: '#tag-body'
+          - include: '#tag-body-big'
           - include: '#tag-params'
 
           - match: ([[:word:]]|\-)
@@ -277,6 +297,7 @@ repository:
           - include: '#variables'
           - include: '#scripts'
           - include: '#tag-body'
+          - include: '#tag-body-big'
           - include: '#tag-params'
 
           - match: ([[:word:]]|\-)
@@ -293,6 +314,7 @@ repository:
           - include: '#variables'
           - include: '#scripts'
           - include: '#tag-body'
+          - include: '#tag-body-big'
           - include: '#tag-params'
 
           - match: ([[:word:]]|\-)
@@ -309,6 +331,7 @@ repository:
           - include: '#variables'
           - include: '#scripts'
           - include: '#tag-body'
+          - include: '#tag-body-big'
           - include: '#tag-params'
 
           - match: ([[:word:]]|\-)
@@ -316,7 +339,7 @@ repository:
   tag-params:
     patterns:
       - begin: (\t|\ )
-        end: (?=\s|\>|\/[^\*]|\;|\]|\})
+        end: (?=\s|\<|\>|\/[^\*]|\;|\]|\})
         patterns:
           - begin: \(
             end: \)
@@ -340,7 +363,7 @@ repository:
             beginCaptures:
               0:
                 name: entity.other.attribute-name.css
-            end: (?=\=|\s|\>|\/[^\*]|\;|\]|\})
+            end: (?=\=|\s|\<|\>|\/[^\*]|\;|\]|\})
             patterns:
               - match: \\\n
                 name: constant.character.escape.js
@@ -354,44 +377,44 @@ repository:
                 name: entity.other.attribute-name.css
 
           - begin: (?=\=)
-            end: (?=\s|\>|\/[^\*]|\;|\]|\}|\\\n)
+            end: (?=\s|\<|\>|\/[^\*]|\;|\]|\}|\\\n)
             patterns:
-              - match: (\=)\s*(\d+)(?=\s|\>|\/[^\*]|\;|\]|\})
+              - match: (\=)\s*(\d+)(?=\s|\<|\>|\/[^\*]|\;|\]|\})
                 captures:
                   1:
                     name: keyword.operator.pattern.css
                   2:
                     name: constant.numeric.css
 
-              - match: (\=)\s*(\d*\.\d+)(?=\s|\>|\/[^\*]|\;|\]|\})
+              - match: (\=)\s*(\d*\.\d+)(?=\s|\<|\>|\/[^\*]|\;|\]|\})
                 captures:
                   1:
                     name: keyword.operator.pattern.css
                   2:
                     name: constant.numeric.css
 
-              - match: (\=)\s*(\d+)(?=\s|\>|\/[^\*]|\;|\]|\})
+              - match: (\=)\s*(\d+)(?=\s|\<|\>|\/[^\*]|\;|\]|\})
                 captures:
                   1:
                     name: keyword.operator.pattern.css
                   2:
                     name: constant.numeric.css
 
-              - match: (\=)\s*(true|false)(?=\s|\>|\/[^\*]|\;|\]|\})
+              - match: (\=)\s*(true|false)(?=\s|\<|\>|\/[^\*]|\;|\]|\})
                 captures:
                   1:
                     name: keyword.operator.pattern.css
                   2:
                     name: constant.language.boolean.ec
 
-              - match: (\=)\s*(null)(?=\s|\>|\/[^\*]|\;|\]|\})
+              - match: (\=)\s*(null)(?=\s|\<|\>|\/[^\*]|\;|\]|\})
                 captures:
                   1:
                     name: keyword.operator.pattern.css
                   2:
                     name: constant.language.null.ec
 
-              - match: (\=)\s*(undefined)(?=\s|\>|\/[^\*]|\;|\]|\})
+              - match: (\=)\s*(undefined)(?=\s|\<|\>|\/[^\*]|\;|\]|\})
                 captures:
                   1:
                     name: keyword.operator.pattern.css
@@ -402,7 +425,7 @@ repository:
                 beginCaptures:
                   0:
                     name: keyword.operator.pattern.css
-                end: (?=\s|\>|\/[^\*]|\;|\]|\}|\\\n)
+                end: (?=\s|<|\>|\/[^\*]|\;|\]|\}|\\\n)
                 name: string
                 patterns:
                   - include: '#strings-escape'
@@ -422,32 +445,27 @@ repository:
           - match: \\\n
             name: constant.character.escape.js
 
+          - match: \<
+            name: invalid.illegal.unexpected-character.html
+
           - include: '#comments'
           - include: '#variables'
           - include: '#scripts'
           - include: '#strings-escape'
           - include: '#tag-sub'
-          - include: '#tag-body-multiline'
           - include: '#include'
-  tag-body-multiline:
-    begin: \(
-    beginCaptures:
-      0:
-        name: punctuation.definition.directive.cpp
-    end: \)
-    endCaptures:
-      0:
-        name: punctuation.definition.directive.cpp
+  tag-body-big:
     patterns:
-      - match: \\\n
-        name: constant.character.escape.js
-
-      - include: '#comments'
-      - include: '#variables'
-      - include: '#scripts'
-      - include: '#strings-escape'
-      - include: '#tag-sub'
-      - include: '#include'
+      - begin: \<
+        beginCaptures:
+          0:
+            name: punctuation.definition.tag.end.html
+        end: \>
+        endCaptures:
+          0:
+            name: punctuation.definition.tag.end.html
+        patterns:
+          - include: '#strings-escape'
   tag-sub:
     patterns:
       - begin: \[

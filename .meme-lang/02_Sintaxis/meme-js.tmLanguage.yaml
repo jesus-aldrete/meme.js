@@ -176,6 +176,8 @@ repository:
             name: storage.modifier.js
           5:
             name: entity.other.inherited-class.js
+      - match: classjs
+        name: storage.type.class.js meta.class.js
       - match: class
         name: storage.type.class.js meta.class.js
       - begin: (assign)(\t|\ )+(\[)
@@ -248,7 +250,7 @@ repository:
         name: string.zone.private.js
       - match: '(^[ \t]+)?\/\/(\t|\ )*front-public(?=\n|\r)'
         name: string.zone.private.js
-      - match: '(^[ \t]+)?\/\/(\t|\ )*back-tcp(?=\n|\r)'
+      - match: '(^[ \t]+)?\/\/(\t|\ )*back-rest(?=\n|\r)'
         name: constant.language.zone.rest.js
       - match: '(^[ \t]+)?\/\/(\t|\ )*back-socket(?=\n|\r)'
         name: constant.language.zone.socket.js
@@ -272,7 +274,7 @@ repository:
           - match: '[^A-z0-9]'
             name: comment.block.documentation.js
   meme-view:
-    begin: (\b|^\s*|\s*)?(View)\s*(\(\s*)(\.*)(\))\s*(\{)
+    begin: (\b|^\s*|\s*)?(View|Cloud)\s*(\(\s*)(\.*)(\))\s*(\{)
     end: \}
     beginCaptures:
       2:
