@@ -181,6 +181,7 @@
 		"MemeJS"     : { "iconPath": "./icons/MemeJS.svg" },
 		"Mimix"      : { "iconPath": "./icons/Mimix.svg" },
 		"NetCrafter" : { "iconPath": "./icons/NetCrafter.svg" },
+		"PoliBase"   : { "iconPath": "./icons/PoliBase.svg" },
 		"SAG"        : { "iconPath": "./icons/SAG.svg" },
 		"Santander"  : { "iconPath": "./icons/Santander.svg" },
 		"TabsKeeper" : { "iconPath": "./icons/TabsKeeper.svg" },
@@ -207,6 +208,7 @@
 		"MemeJS-open"     : { "iconPath": "./icons/MemeJS-open.svg" },
 		"Mimix-open"      : { "iconPath": "./icons/Mimix-open.svg" },
 		"NetCrafter-open" : { "iconPath": "./icons/NetCrafter-open.svg" },
+		"PoliBase-open"   : { "iconPath": "./icons/PoliBase-open.svg" },
 		"SAG-open"        : { "iconPath": "./icons/SAG-open.svg" },
 		"Santander-open"  : { "iconPath": "./icons/Santander-open.svg" },
 		"TabsKeeper-open" : { "iconPath": "./icons/TabsKeeper-open.svg" }
@@ -418,6 +420,7 @@
 		"MemeJS"     : "MemeJS",
 		"Mimix"      : "Mimix",
 		"NetCrafter" : "NetCrafter",
+		"PoliBase"   : "PoliBase",
 		"SAG"        : "SAG",
 		"Santander"  : "Santander",
 		"TabsKeeper" : "TabsKeeper"
@@ -445,6 +448,7 @@
 		"MemeJS"     : "MemeJS-open",
 		"Mimix"      : "Mimix-open",
 		"NetCrafter" : "NetCrafter-open",
+		"PoliBase"   : "PoliBase-open",
 		"SAG"        : "SAG-open",
 		"Santander"  : "Santander-open",
 		"TabsKeeper" : "TabsKeeper-open"
