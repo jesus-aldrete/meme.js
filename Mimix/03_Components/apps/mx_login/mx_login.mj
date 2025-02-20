@@ -1,4 +1,5 @@
 class {
+/*/ ***** Funciones ***** /*/
 	// front-private
 	async Login  () {
 		this.Trigger( 'mx/auth/logout' );
@@ -38,6 +39,7 @@ class {
 		else this.Trigger( 'mx/router/push', 'login' );
 	}
 
+/*/ ***** Front ***** /*/
 	// front-public
 	Tag  () {
 		const log = this.urls['/mx_login.js'];

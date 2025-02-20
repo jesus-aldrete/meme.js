@@ -1,4 +1,20 @@
 class {
+/*/ ***** Funciones ***** /*/
+	// front-public
+	async Copiar() {
+		const select_origin = props.editor.listSelections();
+
+		props.editor.execCommand( 'selectAll' );
+
+		const text_copy = props.editor.getSelection();
+
+		await navigator.clipboard.writeText( text_copy ).catch( e => console.error( 'No se pudo copiar el código: ', e ) );
+
+		props.editor.setSelections( select_origin );
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
 	Load () {
 		/* Declaraciones */
 		const { urls, file }      = this;
@@ -44,7 +60,7 @@ class {
 		exclude file './mx_editor.css'
 	}
 
-	// public
+	// front-public
 	async Create() {
 		let   url, id_code;
 		const code = props.code = refs.code.textContent;
@@ -118,18 +134,5 @@ class {
 			exec( props.type );
 		}
 		else exec( props.type );
-	}
-
-	// public
-	async Copiar() {
-		const select_origin = props.editor.listSelections();
-
-		props.editor.execCommand( 'selectAll' );
-
-		const text_copy = props.editor.getSelection();
-
-		await navigator.clipboard.writeText( text_copy ).catch( e => console.error( 'No se pudo copiar el código: ', e ) );
-
-		props.editor.setSelections( select_origin );
 	}
 }

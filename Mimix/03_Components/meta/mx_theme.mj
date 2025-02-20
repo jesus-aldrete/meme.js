@@ -5,12 +5,12 @@ class {
 
 	// front-public
 	Tag() {
-		/* Declaraciones */
-		const { Typeof                 } = require( 'meme:lib' );
-		const { file, props:{ colors } } = this;
+		/*/ ***** Declaraciones ***** /*/
+		const { Typeof                           } = require( 'meme:lib' );
+		const { file, props:{ colors, defaults } } = this;
 		// **************************************************
 
-		/* Funciones */
+		/*/ ***** Funciones ***** /*/
 		function HEXToRGBA  ( color  ) {
 			const match  = /\#?(\w{2})(\w{2})(\w{2})(\w{2})?/.exec( color );
 			const result = {
@@ -70,7 +70,7 @@ class {
 		}
 		// **************************************************
 
-		/* Get */
+		/*/ ***** Get ***** /*/
 		async function GetColors() {
 			if ( !colors ) return null;
 
@@ -91,7 +91,11 @@ class {
 		}
 
 		function GetDefault(        ) {
-			return {
+			let
+			val  = defaults==null ? defaults : ( typeof defaults==='string' ? !( !defaults || defaults.match( /false/i ) ) : !!defaults );
+			val??= true;
+
+			return val===false ? {} : {
 				back: {color:'E8E8E8', scrape:true},
 				high: {color:'ffe743', scrape:true},
 				soft: {color:'2E2E2E', scrape:true},
@@ -128,7 +132,7 @@ class {
 		}
 		// **************************************************
 
-		/* Inicio */
+		/*/ ***** Inicio ***** /*/
 		async function Inicio() {
 			let
 			col = await GetColors() ?? GetDefault();
@@ -149,8 +153,6 @@ class {
 					'}' +
 					':root,::backdrop {' +
 						col +
-						"--font-family_theme:'Trebuchet MS', Arial;" +
-						'--animation:.3s ease-out;' +
 					'}' +
 					'body{' +
 						'color:var(--color_theme);' +

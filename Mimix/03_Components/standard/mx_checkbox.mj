@@ -1,7 +1,17 @@
 class {
+/*/ ***** Funciones ***** /*/
 	// front-private
 	id = Hash();
 
+	// front-public
+	focus () {
+		refs.input.focus();
+	}
+	select() {
+		refs.input.focus();
+	}
+
+/*/ ***** Front ***** /*/
 	// front-public
 	View () {
 		input*input id =i{id} type=checkbox
@@ -123,13 +133,5 @@ class {
 
 		this.Class     ( '_disabled', !val );
 		refs.input.Atts(  'disabled', !val );
-	}
-
-	// front-public
-	focus () {
-		refs.input.focus();
-	}
-	select() {
-		refs.input.focus();
 	}
 }

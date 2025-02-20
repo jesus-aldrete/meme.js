@@ -9,7 +9,7 @@ class {
 		let   res   = '';
 
 		if ( props.utf8     ?? true ) res+= {mh meta charset="UTF-8"/};
-		if ( props.viewport ?? true ) res+= {mh meta name="viewport" content="width=device-width"/};
+		if ( props.viewport ?? true ) res+= {mh meta name="viewport" content="width=device-width, initial-scale=1"/};
 
 		if ( props.color       ) res+= {mh meta name="theme-color" content="{props.color}"};
 		if ( props.title       ) res+= {mh title>{props.title}};

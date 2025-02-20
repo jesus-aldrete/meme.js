@@ -1,4 +1,19 @@
 class {
+/*/ ***** Funciones ***** /*/
+	// front-private
+	Validate() {
+		const {
+			user: { value:user },
+			pass: { value:pass },
+		} = refs;
+
+		refs.login.enabled = !!user && !!pass;
+
+		return { user, pass };
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
 	View () {
 		h1>LOGIN
 
@@ -132,7 +147,7 @@ class {
 			100%:>transform: translate(-50%,-50%) rotate(360deg)
 	}
 
-	// public
+	// front-public
 	get enabled(     ) { return props.enabled ?? true }
 	set enabled( val ) {
 		val           =
@@ -166,7 +181,7 @@ class {
 		}
 	}
 
-	// private
+	// front-private
 	onEnterUser() {
 		refs.pass.focus();
 	}
@@ -225,17 +240,5 @@ class {
 		this.Trigger( 'login/change', result );
 
 		return result;
-	}
-
-	// private
-	Validate() {
-		const {
-			user: { value:user },
-			pass: { value:pass },
-		} = refs;
-
-		refs.login.enabled = !!user && !!pass;
-
-		return { user, pass };
 	}
 }

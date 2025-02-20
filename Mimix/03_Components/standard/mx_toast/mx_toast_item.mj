@@ -2,6 +2,28 @@ class {
 	// configuration
 	static version = '0.0.3'
 
+/*/ ***** Funciones ***** /*/
+	// front-private
+	Meazure( time ) {
+		props.ya_meazure    = true;
+		const style         = window.getComputedStyle( refs.time );
+		const font          = style.fontSize + ' ' + style.fontFamily;
+		const canvas        = document.createElement( 'canvas' );
+		const ctx           = canvas.getContext( '2d' );
+		ctx.font            = font;
+		const width_letter  = ctx.measureText( '0' );
+		const margin_left   = parseFloat( style.marginLeft   ) || 0;
+		const margin_right  = parseFloat( style.marginRight  ) || 0;
+		const padding_left  = parseFloat( style.paddingLeft  ) || 0;
+		const padding_right = parseFloat( style.paddingRight ) || 0;
+		let   time_length   = time.toString().length || 1;
+
+		if ( time_length<2 ) time_length = 2;
+
+		refs.time.Css({ minWidth:( ( width_letter.width * time_length ) + padding_left + margin_left + padding_right + margin_right ) + 'px' });
+	}
+
+/*/ ***** Front ***** /*/
 	// front-public
 	View () {
 		&.{props.title ? '_has_title' : ''}._{props.type} (transitionend)=onEnd
@@ -174,25 +196,5 @@ class {
 	}
 	onRetime(       ) {
 		this.time+= 5;
-	}
-
-	// front-private
-	Meazure( time ) {
-		props.ya_meazure    = true;
-		const style         = window.getComputedStyle( refs.time );
-		const font          = style.fontSize + ' ' + style.fontFamily;
-		const canvas        = document.createElement( 'canvas' );
-		const ctx           = canvas.getContext( '2d' );
-		ctx.font            = font;
-		const width_letter  = ctx.measureText( '0' );
-		const margin_left   = parseFloat( style.marginLeft   ) || 0;
-		const margin_right  = parseFloat( style.marginRight  ) || 0;
-		const padding_left  = parseFloat( style.paddingLeft  ) || 0;
-		const padding_right = parseFloat( style.paddingRight ) || 0;
-		let   time_length   = time.toString().length || 1;
-
-		if ( time_length<2 ) time_length = 2;
-
-		refs.time.Css({ minWidth:( ( width_letter.width * time_length ) + padding_left + margin_left + padding_right + margin_right ) + 'px' });
 	}
 }

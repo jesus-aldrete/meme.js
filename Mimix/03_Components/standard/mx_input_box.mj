@@ -1,5 +1,4 @@
 class {
-	// front-public
 	View () {
 		label*sublabel for={this.id_input}
 		label*label    for={this.id_input}

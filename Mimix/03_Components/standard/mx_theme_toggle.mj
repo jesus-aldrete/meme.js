@@ -1,4 +1,5 @@
 class {
+/*/ ***** Funciones ***** /*/
 	// front-private
 	async SelectIcon ( type, emit=true     ) {
 		let ele;
@@ -46,6 +47,7 @@ class {
 		}
 	}
 
+/*/ ***** Front ***** /*/
 	// front-public
 	View () {
 		! (mx/toggle)=onToggleTheme

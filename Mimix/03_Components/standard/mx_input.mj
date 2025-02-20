@@ -1,7 +1,17 @@
 class extends mx_input_box {
+/*/ ***** Front ***** /*/
 	// front-public
 	id_input = 'i' + Hash();
 
+	// front-public
+	focus () {
+		refs.input.focus();
+	}
+	select() {
+		refs.input.select();
+	}
+
+/*/ ***** Front ***** /*/
 	// front-public
 	View () {
 		&._no_caption (click)=onClick
@@ -131,13 +141,5 @@ class extends mx_input_box {
 			refs.input.selectionStart =
 			refs.input.selectionEnd   = selection;
 		}, 0 );
-	}
-
-	// front-public
-	focus () {
-		refs.input.focus();
-	}
-	select() {
-		refs.input.select();
 	}
 }

@@ -7,10 +7,11 @@ const {
 } = require( 'meme:lib' );
 
 class {
-	// public-server
+	// configuration
 	static url = 'oauth_google'
 
-	// rest
+/*/ ***** Back ***** /*/
+	// back-rest
 	async chang( hash, state, payload ) {
 		if ( state===false ) delete global.states[hash];
 		else {
@@ -93,12 +94,8 @@ class {
 		}
 	}
 
-	// public
-	Style() {
-		display: none
-	}
-
-	// public
+/*/ ***** Funciones ***** /*/
+	// front-public
 	Generate() {return new Promise( async ( run ) => {
 		const hash  = Hash();
 		let   count = 0;
@@ -121,4 +118,10 @@ class {
 
 		timer();
 	})}
+
+/*/ ***** Front ***** /*/
+	// front-public
+	Style() {
+		display: none
+	}
 }

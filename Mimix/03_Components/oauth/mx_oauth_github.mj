@@ -7,9 +7,11 @@ const {
 } = require( 'meme:lib' );
 
 class {
+	// configuration
 	static url = 'oauth_github';
 
-	// rest
+/*/ ***** Back ***** /*/
+	// back-rest
 	async chang( hash, state, payload ) {
 		if ( state===false ) delete global.states[hash];
 		else {
@@ -57,6 +59,7 @@ class {
 			token = token.body.split( '&' ).map( v=>v.split( '=' ) ).reduce( ( r, v ) => { r[v[0]]=v[1]; return r }, {} );
 
 			if ( token.error ) {
+				type              = 'error';
 				error             = token.error;
 				error_description = token.error_description;
 			}
@@ -67,7 +70,6 @@ class {
 		}
 
 		if ( error ) {
-			type  = 'error';
 			token = error_description.replace( /\+/gm, ' ' );
 
 			await chang( hash, 'error', { message:token });
@@ -90,12 +92,8 @@ class {
 		};
 	}
 
-	// public
-	Style() {
-		display: none
-	}
-
-	// public
+/*/ ***** Funciones ***** /*/
+	// front-public
 	Generate() {return new Promise( async ( run ) => {
 		const hash  = Hash();
 		let   count = 0;
@@ -118,4 +116,10 @@ class {
 
 		timer();
 	})}
+
+/*/ ***** Front ***** /*/
+	// front-public
+	Style() {
+		display: none
+	}
 }

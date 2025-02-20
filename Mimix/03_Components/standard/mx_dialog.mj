@@ -1,10 +1,26 @@
 class extends HTMLDialogElement:dialog {
+/*/ ***** Funciones ***** /*/
 	// front-private
 	run_function = null;
 
 	// front-public
+	Visible( value ) {
+		clearTimeout( props.timer_end   );
+		clearTimeout( props.timer_start );
+
+		value??= !this.visible;
+		value  = typeof value==='string' ? !( !value || value.match( /false/i ) ) : !!value;
+
+		return new Promise( ( run ) => {
+			run_function = run;
+			this.visible = value;
+		});
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
 	View () {
-		& tabindex=0 (keydown)=onKeyDown>{this.body}
+		& tabindex=0 (keydown)=onKeyDown (close)=onClose>{this.body}
 		.back
 	}
 	Style() {/* Tema */
@@ -90,23 +106,19 @@ class extends HTMLDialogElement:dialog {
 		}
 	}
 
-	// front-public
-	Visible( value ) {
-		clearTimeout( timer );
-
-		value??= !this.visible;
-		value  = typeof value==='string' ? !( !value || value.match( /false/i ) ) : !!value;
-
-		return new Promise( ( run ) => {
-			run_function = run;
-			this.visible = value;
-		});
-	}
-
 	// front-private
+	onClose  ( event ) {
+		if ( event.target===this || !props.allow_close ) return;
+
+		this.visible = false;
+	}
 	onKeyDown( event ) {
 		if ( event.target!==this || event.key!=='Escape' ) return;
 
 		event.preventDefault();
+
+		if ( props.allow_close ) {
+			this.visible = false;
+		}
 	}
 }

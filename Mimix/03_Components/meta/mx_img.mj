@@ -1,26 +1,21 @@
 class {
-	Tag () {
-		/* Declaraciones */
-		const {
-			element       : { clase },
-			file          : ofile,
-			props , props : { src },
-			config, config: { res:{ sources } },
-			compilers     ,
-		} = this;
+	Tag() {
+		/*/ ***** Declaraciones ***** /*/
+		const lib     = require( 'meme:lib'     );
+		const courier = require( 'meme:courier' );
+		const cache   = Cache();
+		const gthis   = this;
+		let   cirro   = await courier.ConnectClient( this.config.cirromatic ).catch( e => console.Error( e ) );
 
-		const { Mime, Hash, Fetch, ParsePath } = require( 'meme:lib' );
-		const cache                            = Cache();
-
-		/* Clases */
+		/*/ ***** Clases ***** /*/
 		function Cache() {
 			/* Declaraciones */
 			let   cache      ;
-			const cache_path = config.constants.work_space.path + '/images.meme.cache';
+			const cache_path = [[work_space]].path + '/images.meme.cache';
 
 			/* Metodos */
 			function Load() {
-				const ofile = ParsePath( cache_path );
+				const ofile = lib.ParsePath( cache_path );
 
 				if ( ofile.type!=='file' ) return {};
 
@@ -28,14 +23,13 @@ class {
 					return JSON.parse( ofile.Read() );
 				}
 				catch( e ) {
-					console.Error( `cd[mx_img:Load:LoadCache]: ${e.message}` );
-					console.trace();
+					console.Error( MemeError( 'bad load', e.message ).ParseConsole() );
 
 					return {};
 				}
 			}
 			function Save() {
-				const ofile = ParsePath( cache_path );
+				const ofile = lib.ParsePath( cache_path );
 
 				ofile.Write(
 					JSON.stringify( cache, 0, '\t' )
@@ -45,19 +39,19 @@ class {
 			async function Get( ofile ) {
 				ofile.data = ofile.Read( false ).toString( 'base64' );
 				const body = {
-					...props,
+					...gthis.props,
 					...{ src:undefined },
 
 					buffer: ofile.data,
 				};
 
-				const id = Hash( JSON.stringify( body ) );
+				const id = lib.Hash( JSON.stringify( body ) );
 
 				if ( cache[ofile.path]?.id===id ) return cache[ofile.path];
 
 				console.Info( `fb[process:] ${ofile.path}` );
 
-				const result = await driver.Trigger( 'CirroMatic/image', body );
+				const result = await cirro.Trigger( 'CirroMatic/image', body );
 
 				if ( !result ) return;
 
@@ -69,25 +63,23 @@ class {
 
 			/* Inicio */
 			function Inicio() {
-				if ( global._mximg_images_cache ) return global._mximg_images_cache;
-
 				cache = Load();
 
-				return global._mximg_images_cache = { Load, Save, Get };
+				return { Load, Save, Get };
 			};return Inicio();
 		}
 
-		/* Funciones */
+		/*/ ***** Funciones ***** /*/
 		function GetOFile ( url_res            ) {
 			let   fil ;
 			url_res   = '[[RES]]'==='.' ? url_res : url_res.replaceAll( '[[RES]]', '' );
 			url_res   = url_res.replace( /^\.(\\|\/)/gm, '/' );
 			const rex = new RegExp( url_res + '$', 'gmi' );
 
-			for ( const source of sources ) {
+			for ( const source of gthis.config.res.sources ) {
 				if ( source.type!=='folder' ) continue;
 
-				const ofiles = source.Travel({ ignore:config.res.ignore, filter:[rex] });
+				const ofiles = source.Travel({ ignore:gthis.config.res.ignore, filter:[rex] });
 
 				if ( ofiles.length===1 ) {
 					fil = ofiles[0];
@@ -100,7 +92,7 @@ class {
 			return fil;
 		}
 		function GetClases(                    ) {
-			const clases = [...clase];
+			const clases = [...gthis.element.clase];
 
 			clases.push( 'mx_img' );
 
@@ -136,7 +128,7 @@ class {
 					''
 				);
 
-				return r + `<source type="${Mime( v.ext )}" srcset="${src}">`
+				return r + `<source type="${lib.Mime( v.ext )}" srcset="${src}">`
 			}, '' );
 		}
 
@@ -168,15 +160,13 @@ class {
 			await driver.Trigger( 'project/res/add', { files } );
 		}
 
-		/* Inicio */
+		/*/ ***** Inicio ***** /*/
 		async function Inicio() {
-			await driver.Connect( '[[token_matic]]' );
-
-			const url   = ( '[[RES]]'==='.' ? src : src.replace( '[[RES]]', '' ) ).replace( /\.[a-z]*$/gi, '' ).replace( /^\.(\\|\/)/, '/' );
-			const ofile = GetOFile( src );
+			const url   = ( '[[RES]]'==='.' ? gthis.props.src : gthis.props.src.replace( '[[RES]]', '' ) ).replace( /\.[a-z]*$/gi, '' ).replace( /^\.(\\|\/)/, '/' );
+			const ofile = GetOFile( gthis.props.src );
 
 			if ( !ofile ) {
-				console.Error( `no existe el archivo: ${src}` );
+				console.Error( MemeError( 'not found', `no existe el archivo: ${src}` ).ParseConsole() );
 				return;
 			}
 
@@ -184,7 +174,7 @@ class {
 			const result = await cache.Get( ofile );
 
 			if ( !result ) {
-				console.Error( `mx_img:Inicio: no se pudo procesar la imagen: ${ofile.path}` );
+				console.Error( MemeError( 'not proc', `no se pudo procesar la imagen: fm[${ofile.path}]` ).ParseConsole() );
 				return;
 			}
 
@@ -198,6 +188,7 @@ class {
 			}
 
 			/* Size */
+			const props        = gthis.props;
 			const width        = parseFloat( props.width  ) || 0;
 			const height       = parseFloat( props.height ) || 0;
 			result.real_width  = result.width ;
@@ -210,10 +201,21 @@ class {
 			if ( !result.width &&  result.height ) result.width  = ( result.real_width  * result.height ) / result.real_height;
 
 			/* Html */
+			props.decoding??= 'async';
+
 			result.html = (
-				`<picture class="${GetClases()}">`                                                                                        +
-					GetTypes( url, ofile, result )                                                                                        +
-					`<img src="{{RES}}${url}@1x${ofile.ext}" alt="${props.alt || ''}" width="${result.width}" height="${result.height}">` +
+				`<picture class="${GetClases()}">` +
+					GetTypes( url, ofile, result ) +
+					`<img `+
+						`src="{{RES}}${url}@1x${ofile.ext}" `+
+						`alt="${   props.alt     || ''                 }" `+
+						`width="${ result.width  || result.real_width  }" `+
+						`height="${result.height || result.real_height }" `+
+						`${props.loading        ? `loading="${      props.loading}"`        : ''}`+
+						`${props.decoding       ? `decoding="${     props.decoding}"`       : ''}`+
+						`${props.fetchpriority  ? `fetchpriority="${props.fetchpriority}"`  : ''}`+
+						`${props['aria-hidden'] ? `aria-hidden="${  props['aria-hidden']}"` : ''}`+
+					`>` +
 				'</picture>'
 			);
 

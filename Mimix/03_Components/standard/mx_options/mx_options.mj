@@ -61,7 +61,15 @@ class {
 		&._is_shadow >.shadow:>opacity: 1
 	}
 
-	// public
+	// front-public
+	get show_close(     ) { return !!props.show_close }
+	set show_close( val ) {
+		val                    =
+		props.show_close       =
+		refs.header.show_close = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+	}
+
+	// front-public
 	Create () {
 		props.resize_observer = new ResizeObserver( onResize )
 
@@ -74,7 +82,7 @@ class {
 		props.resize_observer.disconnect()
 	}
 
-	// private
+	// front-private
 	onScroll( event ) {
 		if ( refs.cont.scrollTop>5 ) {
 			if ( !props.is_shadow ) {

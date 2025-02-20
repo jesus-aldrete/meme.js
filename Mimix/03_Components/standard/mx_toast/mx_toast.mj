@@ -2,31 +2,7 @@ class {
 	// configuration
 	static version = '0.0.1'
 
-	// front-public
-	View () {
-		! (mx/toast)=onNew
-	}
-	Style() {
-		align-items   : flex-end
-		background    : rgba(0,0,0,0)
-		border        : none
-		display       : flex
-		flex-direction: column
-		gap           : 20
-		height        : calc(100% - 40px)
-		left          : auto
-		pointer-events: none
-		position      : fixed
-		right         : 0
-		top           : 40
-		z-index       : 11
-	}
-
-	// front-private
-	onNew( _, type, message, code, time ) {
-		New( type, message, code, time );
-	}
-
+/*/ ***** Funciones ***** /*/
 	// front-public
 	New( type, message, code, time, title ) {
 		if ( !type ) return;
@@ -61,5 +37,31 @@ class {
 				title  ={ title }\
 				message={ message }\
 		});
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
+	View () {
+		! (mx/toast)=onNew
+	}
+	Style() {
+		align-items   : flex-end
+		background    : rgba(0,0,0,0)
+		border        : none
+		display       : flex
+		flex-direction: column
+		gap           : 20
+		height        : calc(100% - 40px)
+		left          : auto
+		pointer-events: none
+		position      : fixed
+		right         : 0
+		top           : 40
+		z-index       : 11
+	}
+
+	// front-private
+	onNew( _, type, message, code, time ) {
+		New( type, message, code, time );
 	}
 }

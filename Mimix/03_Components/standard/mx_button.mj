@@ -1,7 +1,39 @@
 class extends HTMLButtonElement:button {
+/*/ ***** Funciones ***** /*/
 	// front-private
 	waits = /ok|wait|warn|error/;
 
+	// front-public
+	Ok    ( wait ) {
+		SetWait( 'ok', wait );
+	}
+	Wait  ( wait ) {
+		SetWait( 'wait', wait );
+	}
+	Warn  ( wait ) {
+		SetWait( 'warn', wait );
+	}
+	Error ( wait ) {
+		SetWait( 'error', wait );
+	}
+	Normal( wait ) {
+		clearTimeout( props.timer );
+		this.Class( waits, false );
+	}
+
+	// front-private
+	SetWait( type, wait ) {
+		clearTimeout( props.timer );
+
+		this.Class( waits, false );
+		this.Class( type , true  );
+
+		if ( wait!==0 ) {
+			props.timer = setTimeout( ()=>{ this.Class( waits, false ) }, wait || props.wait || 2000 );
+		}
+	}
+
+/*/ ***** Front ***** /*/
 	// front-public
 	View () {
 		&.default title={props.title} \
@@ -164,6 +196,10 @@ class extends HTMLButtonElement:button {
 				box-shadow      : none
 				color           : $icon_active-color
 				transition      : none
+			::disabled
+				background-color: transparent
+				opacity         : .4
+				pointer-events  : none
 			&.ok
 				background-color: transparent
 				color           : $icon_ok-color
@@ -324,6 +360,9 @@ class extends HTMLButtonElement:button {
 				background-color: $error_hover-back
 			::active
 				background-color: $error_active-back
+
+		>*
+			pointer-events: none
 	}
 
 	// front-public
@@ -399,35 +438,5 @@ class extends HTMLButtonElement:button {
 		}
 
 		props.timer = setTimeout( ()=>{ this.Class( waits, false ) }, props.wait );
-	}
-
-	// front-public
-	Ok    ( wait ) {
-		SetWait( 'ok', wait );
-	}
-	Wait  ( wait ) {
-		SetWait( 'wait', wait );
-	}
-	Warn  ( wait ) {
-		SetWait( 'warn', wait );
-	}
-	Error ( wait ) {
-		SetWait( 'error', wait );
-	}
-	Normal( wait ) {
-		clearTimeout( props.timer );
-		this.Class( waits, false );
-	}
-
-	// front-private
-	SetWait( type, wait ) {
-		clearTimeout( props.timer );
-
-		this.Class( waits, false );
-		this.Class( type , true  );
-
-		if ( wait!==0 ) {
-			props.timer = setTimeout( ()=>{ this.Class( waits, false ) }, wait || props.wait || 2000 );
-		}
 	}
 }

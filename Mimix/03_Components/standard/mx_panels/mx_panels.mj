@@ -1,33 +1,5 @@
 class {
-/*/ ***** View ***** /*/
-	View () {
-		*panels (open)=onOpen (mousedown)=onDown>{this.body}
-	}
-	Style() {
-		@theme-light
-			--border: $!soft_75|#979797
-		@theme-dark
-			--border: $!soft_60|#585858
-
-		border        : solid 1 $border
-		box-sizing    : border-box
-		display       : flex
-		flex-direction: column
-		>.panels
-			display       : flex
-			flex          : 1
-			flex-direction: column
-			position      : relative
-	}
-
-	// front-public
-	Create() {
-		props.min_height??= 150;
-
-		ResizePanels();
-	}
-
-/*/ ***** Front ***** /*/
+/*/ ***** Funciones ***** /*/
 	// front-public
 	ResizePanels() {
 		let   isr     = false;
@@ -124,7 +96,35 @@ class {
 		}
 	}
 
-/*/ ***** Eventos ***** /*/
+/*/ ***** Front ***** /*/
+	// front-public
+	View () {
+		*panels (open)=onOpen (mousedown)=onDown>{this.body}
+	}
+	Style() {
+		@theme-light
+			--border: $!soft_75|#979797
+		@theme-dark
+			--border: $!soft_60|#585858
+
+		border        : solid 1 $border
+		box-sizing    : border-box
+		display       : flex
+		flex-direction: column
+		>.panels
+			display       : flex
+			flex          : 1
+			flex-direction: column
+			position      : relative
+	}
+
+	// front-public
+	Create() {
+		props.min_height??= 150;
+
+		ResizePanels();
+	}
+
 	// front-private
 	onOpen( _, value ) {
 		const panel  = event.target.closest( 'mx-panels-panel' );

@@ -1,0 +1,36 @@
+
+
+function Create( gthis ) {
+	let res = '';
+
+	res+= (
+		`<?xml version="1.0" encoding="UTF-8"?>` +
+		`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+	'');
+
+	for ( const [url,file] of Object.entries( gthis.urls ) ) {
+		if ( url==='/index'                                      ) continue;
+		if ( url.match( /\.[a-z]+$/i )                           ) continue;
+		if ( file.not_available || file.not_available_in_sitemap ) continue;
+
+		let pri = .5;
+
+		switch ( url ) {
+			case '/': pri = 1; break;
+			default : pri = 1 - ( ( url.split( '/' ).length / 10 ) - .1 );
+		}
+
+		res+= (
+			`<url>` +
+				`<loc>[[APP]]${url}</loc>` +
+				`<lastmod>${( new Date ).toISOString().split( 'T' )[0]}</lastmod>` +
+				`<changefreq>yearly</changefreq>` +
+				`<priority>${pri.toFixed( 1 )}</priority>` +
+			`</url>` +
+		'');
+	}
+
+	return res;
+}
+
+module.exports = { Create };

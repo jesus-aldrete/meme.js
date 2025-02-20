@@ -1,6 +1,40 @@
 
 
 /*/ ***** Funciones ***** /*/
+function GetFilesExtends( tis, extends_class , ya ) {
+	if ( !extends_class || extends_class.match( /^(HTML|SVG)/gm ) ) return [];
+	if (  ya[extends_class]                                       ) return [];
+
+	const result      = [];
+	const oextend     = tis.urls[`/${extends_class}.js`];
+	ya[extends_class] = true;
+
+	if ( !oextend || !oextend.struct?.is_client_class ) return '';
+
+	result.push( ...GetFilesImports( tis, oextend.imports              , ya ) );
+	result.push( ...GetFilesExtends( tis, oextend.struct?.extends_class, ya ) );
+
+	return result;
+}
+function GetFilesImports( tis, object_imports, ya ) {
+	let res = [];
+
+	for ( const [key,value] of Object.entries( object_imports || {} ) ) {
+		if ( ya[key] || !value.find( v=>!v.not_require ) ) continue;
+
+		ya[key]       = true;
+		const oimport = tis.urls[`/${key}.js`];
+
+		if ( !oimport || !oimport.struct?.is_client_class ) continue;
+
+		res.push( oimport                                                      );
+		res.push( ...GetFilesImports( tis, oimport.imports              , ya ) );
+		res.push( ...GetFilesExtends( tis, oimport.struct?.extends_class, ya ) );
+	}
+
+	return res;
+}
+
 function GetExtends( tis, extends_class , ya ) {
 	if ( !extends_class || extends_class.match( /^(HTML|SVG)/gm ) ) return '';
 	if (  ya[extends_class]                                       ) return '';
@@ -46,6 +80,15 @@ function GetImports( tis, object_imports, ya ) {
 
 
 /*/ ***** Metodos ***** /*/
+function ArrayDependencies  ( tis, ofile, ya={} ) {
+	return GetFilesImports( tis, ofile.imports, ya )
+	.filter(
+		v =>
+			Object.keys( v.struct.functions       ).length ||
+			Object.keys( v.struct.getters_setters ).length ||
+			Object.keys( v.struct.variables       ).length
+	);
+}
 function Compiledependencies( tis, ofile, ya={} ) {
 	if ( !ya ) ya = {};
 
@@ -91,11 +134,26 @@ function SeparateStyles     ( code              ) {
 
 	return [styles, code];
 }
+function CleanModules       ( code_html         ) {
+	const reg = /<script\s*type\s*=\s*['"]module['"]>/gm;
+	const rex = reg.exec( code_html );
+
+	if ( !rex ) return code_html;
+
+	const rg2     = /<\/script>/gm;
+	rg2.lastIndex = rex.index;
+	const rx2     = rg2.exec( code_html );
+
+	if ( rx2 ) code_html = code_html.slice( 0, rex.index ) + code_html.slice( rx2.index + rx2[0].length );
+	else       code_html = code_html.slice( 0, rex.index );
+
+	return code_html;
+}
 // ####################################################################################################
 
 
 /*/ ***** Exportaciones ***** /*/
 module.exports = {
-	Compiledependencies, SeparateStyles,
+	Compiledependencies, SeparateStyles, ArrayDependencies, GetImports, CleanModules,
 };
 // ####################################################################################################

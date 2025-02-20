@@ -1,25 +1,196 @@
 class {
 	// configuration
-	static version = '0.0.1';
+	static version = '2.0.1';
 
 	// front-private
 	icons = {};
 
 	// front-public
+	Tag   () {
+		/*/ ***** Declaraciones ***** /*/
+		const lib   = require( 'meme:lib' );
+		const gthis = this;
+		const comps = this.compilers;
+
+		/*/ ***** Is ***** /*/
+		function IsSvg( cad, pos ) {
+			return (
+				(cad[pos    ]==='s' || cad[pos    ]==='S') &&
+				(cad[pos + 1]==='v' || cad[pos + 1]==='V') &&
+				(cad[pos + 2]==='g' || cad[pos + 2]==='G') &&
+				( ( pos + 3 )>=cad.length || comps.IsSpecial( cad, pos + 3 ) ) &&
+				( ( pos - 1 )<0           || comps.IsSpecial( cad, pos - 1 ) )
+			);
+		}
+
+		/*/ ***** Get ***** /*/
+		function GetKey    ( cad, pos ) {
+			let key = '';
+
+			for ( ;pos<cad.length && comps.IsSpaces     ( cad, pos ); pos++ );
+			for ( ;pos<cad.length && comps.IsValidLetter( cad, pos ); key+=cad[pos++] );
+			for ( ;pos<cad.length && comps.IsSpaces     ( cad, pos ); pos++ );
+
+			return [key, pos];
+		}
+		function GetValues ( cad, pos ) {
+			let val = '';
+
+			for ( ;pos<cad.length && comps.IsSpaces( cad, pos ); pos++ );
+
+			const com = cad[pos++];
+
+			for ( ;pos<cad.length; pos++ ) {
+				switch ( cad[pos] ) {
+					case '\\': val+= cad[pos] + cad[++pos]; break;
+					case com : return [val, pos];
+					default  : val+= cad[pos];
+				}
+			}
+
+			return ['', pos];
+		}
+		function GetParamas( cad, pos ) {
+			let key, val, ret = '', iss=false, vie='';
+
+			for ( ;pos<cad.length; pos++ ) {
+				key='', val='';
+
+				[key, pos] = GetKey( cad, pos );
+
+				for ( ;pos<cad.length && comps.IsSpaces( cad, pos ); pos++ );
+
+				if ( cad[pos]==='=' ) [val, pos] = GetValues( cad, pos+1 );
+
+				if ( key ) {
+					if ( key==='style' ) {
+						iss = true;
+						val+= ';display:none;';
+					}
+					else if ( key==='viewBox' ) {
+						vie = val;
+					}
+
+					ret+= ` ${key}="${val}"`;
+				}
+
+				if ( cad[pos]==='>' ) break;
+			}
+
+			if ( !iss ) {
+				ret+= ' style="display:none;"';
+			}
+
+			return [ret, pos, vie];
+		}
+
+		/*/ ***** Replace ***** /*/
+		function ReplaceSymbol( cad, pos ) {
+			let par, vie, res='';
+
+			for ( ;pos<cad.length; pos++ ) {
+				switch ( cad[pos] ) {
+					case '<':
+						if ( IsSvg( cad, pos+1 ) ) {
+							[par, pos, vie] = GetParamas( cad, pos+4 );
+							res            += `<svg${par}><symbol id="${gthis.element.id}" ${vie?`viewBox="${vie}"`:''}>`;
+						}
+						else res+= cad[pos];
+					break;
+
+					default: res+= cad[pos];
+				}
+			}
+
+			res = res.replace( /\<\/svg\>/gmi, '</symbol></svg>' )
+
+			return res;
+		}
+
+		/*/ ***** Get ***** /*/
+		function GetFromCache( icon ) {
+			let cache_file = lib.ParsePath( [[work_space]].path, 'icon.meme.cache' );
+
+			if ( cache_file.type==='file' ) {
+				cache_file = cache_file.Read();
+
+				try {
+					cache_file = JSON.parse( cache_file );
+				}
+				catch ( e ) {
+					console.Erro( `dm[error en fy[mx_svg]]: ${e}` );
+
+					cache_file = {};
+				}
+			}
+			else cache_file = {};
+
+			return cache_file[icon]?.[1];
+		}
+		function GetFromFiles( icon ) {
+			const ofiles = [];
+			const rex    = new RegExp( `\\/${icon}\\.svg$`, 'i' );
+
+			for ( const osource of gthis.config.res.sources ) {
+				ofiles.push(
+					...osource.Travel({ filter:[rex], ignore:gthis.config.res.ignore })
+				);
+			}
+
+			if ( ofiles.length ) return ofiles[0].Read();
+		}
+
+		function GetSvg() {
+			const icon = gthis.props.icon;
+
+			if ( !icon ) return { error:'bad icon', message:'el icono esta vacio' };
+
+			return GetFromCache( icon ) || GetFromFiles( icon );
+		}
+
+		/*/ ***** Inicio ***** /*/
+		function Inicio() {
+			let { clear, only_svg, is_symbol } = gthis.props;
+
+			clear = typeof clear==='string' ? !( !clear || clear.match( /false/i ) ) : !!clear;
+
+			if ( clear===true ) {
+				return '';
+			}
+
+			only_svg  = typeof only_svg ==='string' ? !( !only_svg  || only_svg .match( /false/i ) ) : !!only_svg;
+			is_symbol = typeof is_symbol==='string' ? !( !is_symbol || is_symbol.match( /false/i ) ) : !!is_symbol;
+
+			if ( only_svg || is_symbol ) {
+				if ( is_symbol && !gthis.props.icon ) {
+					return `<svg class="${gthis.element.clase.join(' ')}"><use xlink:href="#${gthis.element.id}"></use></svg>`
+				}
+
+				let svg = GetSvg();
+
+				if ( !svg ) return;
+
+				if ( is_symbol ) svg = ReplaceSymbol( svg, 0 );
+				else             svg = svg.replace( /<svg/gm, `<svg class="${gthis.element.clase.join( ' ' )}"` );
+
+				return svg;
+			}
+		};return Inicio();
+	}
 	Load  () {
-		/* Declaraciones */
+		/*/ ***** Declaraciones ***** /*/
 		const { ParsePath, Fetch }                                      = require( 'meme:lib' );
 		const { file, config, all_elements_groups:{ mx_svg:elements } } = this;
 		const cache_file                                                = ParsePath( [[work_space]].path, 'icon.meme.cache' );
 		let   cache;
 		// **************************************************
 
-		/* Get */
+		/*/ ***** Get ***** /*/
 		async function GetCount(                ) {
 			const count = {};
 
 			for ( const element of ( elements||[] ) ) {
-				let { icon, variant, loaded } = element.params;
+				let { icon, variant, loaded, only_svg, is_symbol } = element.params;
 
 				if ( loaded ) {
 					const PointerFromReference = ( value )=>{ loaded = value };
@@ -31,8 +202,11 @@ class {
 				else {
 					if ( variant ) icon = variant + ':' + icon;
 
+					only_svg     = typeof only_svg ==='string' ? !( !only_svg  || only_svg .match( /false/i ) ) : only_svg;
+					is_symbol    = typeof is_symbol==='string' ? !( !is_symbol || is_symbol.match( /false/i ) ) : is_symbol;
 					count[icon]??= 0;
-					count[icon]++;
+
+					!only_svg && !is_symbol && count[icon]++;
 				}
 			}
 
@@ -88,7 +262,7 @@ class {
 		async function GetOne  ( element        ) {
 			const { params:{ icon, variant } } = element;
 
-			if ( !icon ) return;
+			if ( !icon ) return element.not_require=true;
 
 			const [,svg] = await GetSvg( icon, variant );
 
@@ -103,16 +277,19 @@ class {
 			delete element.params.svg;
 		}
 		async function GetMore ( element, icons ) {
-			const { params:{ icon, variant } } = element;
+			let { params:{ icon, variant, only_svg, is_symbol } } = element;
+			only_svg                                              = typeof only_svg ==='string' ? !( !only_svg  ||only_svg .match( /false/i ) ) : only_svg;
+			is_symbol                                             = typeof is_symbol==='string' ? !( !is_symbol ||is_symbol.match( /false/i ) ) : is_symbol;
 
 			if ( !icon ) return;
 
 			const [name,svg] = await GetSvg( icon, variant );
 
-			if ( !svg ) return;
+			if ( !svg                   ) return;
+			if (  only_svg || is_symbol ) return element.not_require=true;
 
-			icons[name]          = svg;
-			element.params.svg   = name;
+			icons[name]        = svg;
+			element.params.svg = name;
 
 			if ( element.params.style!=='' )
 				element.params.style = 'display:block;';
@@ -138,7 +315,7 @@ class {
 		}
 		// **************************************************
 
-		/* Inicio */
+		/*/ ***** Inicio ***** /*/
 		async function Inicio() {
 			if ( cache_file.type==='file' ) {
 				try   { cache = JSON.parse( cache_file.Read() ) }
@@ -157,6 +334,7 @@ class {
 				switch ( counts[icon] ) {
 					case null     :
 					case undefined: continue;
+					case 0        :
 					case 1        : await GetOne ( element        ); break;
 					default       : await GetMore( element, icons ); break;
 				}
@@ -174,7 +352,7 @@ class {
 			const str = JSON.stringify( cache, 0, '\t' );
 
 			if ( str!==cache_file.data ) cache_file.Write( str );
-		};await        Inicio();
+		};return await Inicio();
 		// **************************************************
 	}
 	View  () {

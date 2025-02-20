@@ -4,6 +4,7 @@ const postgres                                                 = require( 'meme:
 const { Typeof, EncodeJWE, DecodeJWE, DecodeBase64Url, Sleep } = require( 'meme:lib'         );
 
 class {
+/*/ ***** Back ***** /*/
 	// back-private
 	async ClearCookie    ( socket, pause ) {
 		if ( pause ) await Sleep( 1000 );
@@ -107,7 +108,7 @@ class {
 		return res;
 	}
 
-	// back-tcp
+	// back-rest
 	async onGateway() {
 		switch ( this.raw_url ) {
 			case '/function/mx_auth/Login' :
@@ -127,7 +128,7 @@ class {
 		return !!token.is_valid;
 	}
 
-	// back-tcp
+	// back-rest
 	async Valid (      ) {
 		return true;
 	}
@@ -175,6 +176,7 @@ class {
 		};
 	}
 
+/*/ ***** Funciones ***** /*/
 	// front-private
 	EncodeBase64Url( data ) {
 		data = JSON.stringify( data );
@@ -186,6 +188,7 @@ class {
 		return data.slice( 2 ) + data.slice( 0, 2 )
 	}
 
+/*/ ***** Front ***** /*/
 	// front-public
 	View () {
 		! \

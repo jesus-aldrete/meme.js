@@ -2,7 +2,7 @@ class {
 	View () {
 		.shadow
 		header.header
-			h1.title>Opciones[span> | [span>{props.caption}]]
+			h1.title>Opciones[span> | [span>{props.caption}]][mx_button.icon.error speed=true (click)=onClick>[mx_svg icon=bold:x]]
 			.line
 			.cont
 	}
@@ -47,12 +47,22 @@ class {
 				font-weight: 400
 				line-height: 1.15
 				margin     : 0
+				position   : relative
 				>span
 					color      : $header_title_span-color
 					font-size  : 14
 					line-height: 1.14
 					>span
 						color: $header_title_span_span-color
+				>.icon
+					display  : none
+					position : absolute
+					right    : 10
+					top      : 50%
+					transform: translateY(-50%)
+					>.mx_svg
+						height: 25
+						width : 25
 			>.line
 				background: $header_line-back
 				height    : 1
@@ -60,5 +70,20 @@ class {
 	}
 	Style() {/* Estados */
 		&._is_shadow >.shadow:>opacity: 1
+
+		&._show_close >.header > .title >.icon:>display: flex
+	}
+
+	// front-public
+	set show_close( val ) {
+		val              =
+		props.show_close = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
+
+		this.Class( '_show_close', val );
+	}
+
+	// front-private
+	onClick() {
+		this.Trigger( 'close' );
 	}
 }

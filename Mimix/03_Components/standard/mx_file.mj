@@ -1,8 +1,159 @@
+const lib           = require( 'meme:lib'           );
+const child_process = require( 'node:child_process' );
+
 class {
-	Style() {
-		display: none
+/*/ ***** Back ***** /*/
+	// back-private
+	GetScript (                                ) {
+		return `#!/usr/bin/env bash
+
+			# --- CONSTANTES GLOBALES ---
+
+			kMAGICBYTES_ICNS_RESOURCE='69636e73'
+			kFILENAME_FOLDERCUSTOMICON=$'Icon\\r'
+			DEFAULT_ICON_PATH='/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericFolderIcon.icns'
+
+			# --- FUNCIONES ---
+
+			# Obtiene la cadena de bytes del "Resource Fork" de un archivo
+			getResourceByteString() {
+			  xxd -p "$1"/..namedfork/rsrc | tr -d '\\n'
+			}
+
+			# Extrae el icono de una carpeta y lo guarda en un archivo .icns
+			getCustomIcon() {
+			  local folder=$1 icnsOutFile=$2
+			  local fileWithIconData byteOffset byteCount
+
+			  fileWithIconData="$folder/$kFILENAME_FOLDERCUSTOMICON"
+
+			  if \[\[ ! -f $fileWithIconData \]\]; then
+			    echo "El archivo de icono no existe en la carpeta: '\${fileWithIconData/$'\\r'/\\\\r}', usando el icono predeterminado." >&2
+			    cp "$DEFAULT_ICON_PATH" "$icnsOutFile"
+			    return 0
+			  fi
+
+			  read -r byteOffset byteCount < <(getResourceByteString "$fileWithIconData" | /usr/bin/awk -F "$kMAGICBYTES_ICNS_RESOURCE" '{ printf "%s %d", (length($1) + 2) / 2, "0x" substr($2, 0, 8) }')
+
+			  if (( byteOffset > 0 && byteCount > 0 )); then
+			    tail -c "+\${byteOffset}" "$fileWithIconData/..namedfork/rsrc" | head -c $byteCount > "$icnsOutFile" || return
+			    echo "Icono extraído a '$icnsOutFile'"
+			    return 0
+			  else
+			    echo "El archivo de icono no contiene un recurso de icono válido: '\${fileWithIconData/$'\\r'/\\\\r}'" >&2
+			    return 1
+			  fi
+			}
+
+			# Convierte un archivo .icns en múltiples archivos PNG de diferentes tamaños
+			convertIcnsToPng() {
+			  local icnsFile=$1 outputDir=$2
+			  mkdir -p "$outputDir"
+			  iconutil -c iconset "$icnsFile"
+			  mv "\${icnsFile%.icns}.iconset"/* "$outputDir/"
+			  rm -r "\${icnsFile%.icns}.iconset"
+			  echo "Archivos PNG creados en '$outputDir'"
+			}
+
+			# --- VALIDACIÓN Y EJECUCIÓN ---
+
+			if \[\[ $# != 2 \]\]; then
+			  echo "Uso: $0 <carpeta> <directorio_salida>"
+			  exit 1
+			fi
+
+			folder=$1
+			outputDir=$2
+			icnsOutFile="$outputDir/icon.icns"
+
+			# Crear el directorio de salida si no existe
+			mkdir -p "$outputDir"
+
+			if \[\[ ! -d $folder \]\]; then
+			  echo "El objetivo no es una carpeta: '$folder'"
+			  exit 1
+			fi
+
+			getCustomIcon "$folder" "$icnsOutFile" && convertIcnsToPng "$icnsOutFile" "$outputDir"
+			exit $?`.replace( /\t/gm, '' );
+	}
+	GetIcon   ( path, path_script, output_path ) {
+		return new Promise( ( run, err ) => {
+			let oscript = lib.ParsePath( path_script );
+
+			if ( oscript.type!=='file' ) {
+				oscript.Write( GetScript(), { mode:0o755 } );
+
+				oscript = lib.ParsePath( path_script );
+
+				if ( oscript.type!=='file' ) run({ error:'not found', message:'no se encontro el script' });
+			}
+
+			child_process.execFile(
+				oscript.path,
+				[path, output_path],
+				( error, stdout, stderr ) => {
+					if ( error ) {
+						console.Error( 'Error:', stderr );
+						run({ error:'exec error', message:stderr });
+					}
+					else run({ ok:true });
+				}
+			);
+		});
+	}
+	OpenDialog(                                ) {
+		return new Promise( ( run, err ) => {
+			const script = `
+				tell application "Finder"
+					activate
+					set folderPath to choose folder with prompt "Selecciona una carpeta"
+					return POSIX path of folderPath
+				end tell
+			`;
+
+			child_process.exec( `osascript -e '${script}'`, ( err, stdout, stderr ) => {
+				if ( err    ) { console.Error( `Error: ${err.message}` ); run( '' ) }
+				if ( stderr ) { console.error( `stderr: ${stderr}`     ); run( '' ) }
+				else {
+					const folder_path = stdout.trim();
+
+					if ( folder_path ) run( folder_path );
+					else               run( ''          );
+				}
+			});
+		});
 	}
 
+	// back-rest
+	async GetInfoOpenFolder( get_icon, path_script, path_output ) {
+		const work_space = [[work_space]];
+		path_script    ??= `${work_space.path}/01_Resources/bin/extract_icons`;
+		path_output    ??= `${work_space.path}/01_Resources/extracted_icons`;
+		let folder       = await OpenDialog();
+
+		if ( !folder ) return { error:'canceled', message:'El usuario cancelo el dialogo.' };
+
+		folder = lib.ParsePath( folder );
+
+		if ( folder.type!=='folder' ) return { error:'canceled', message:'El usuario cancelo el dialogo.' };
+
+		folder.icon = lib.ParsePath( path_output, lib.Hash( folder.path ) );
+
+		if ( get_icon ) {
+			if ( folder.icon!=='folder' ) {
+				const result = await GetIcon( folder.path, path_script, folder.icon.path );
+
+				if ( result.error ) folder.icon = result;
+			}
+
+			folder.icon.images = folder.icon.Travel({ recursive:false });
+		}
+
+		return folder;
+	}
+
+/*/ ***** Funciones ***** /*/
 	// front-public
 	LoadFile(                  ) {
 		let timer;
@@ -65,5 +216,30 @@ class {
 		);
 
 		link.click();
+	}
+
+	async GetFolder() {
+		this.style.display = 'block';
+
+		await refs.dialog.Visible( true );
+
+		const folder = await GetInfoOpenFolder( true );
+
+		await refs.dialog.Visible( false );
+
+		this.style.display = '';
+
+		return folder;
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
+	View () {
+		mx_dialog*dialog
+	}
+	Style() {
+		display : none
+		position: absolute
+		z-index : -100
 	}
 }

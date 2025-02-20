@@ -1,4 +1,18 @@
 class {
+/*/ ***** Funciones ***** /*/
+	// front-public
+	Clone( element ) {
+		if ( !element || element.tagName!=='MX-TAB' ) return;
+
+		const pos = element.Position( 'off' );
+
+		this.active     = element.active;
+		this.style.top  = `${pos.top}px`;
+		this.style.left = `${pos.left}px`;
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
 	View () {
 		*cont>{this.body}
 		mx_button.icon (click)=onClose>[mx_svg icon=regular:x]
@@ -85,6 +99,19 @@ class {
 	}
 
 	// front-public
+	get cont() { return refs.cont }
+
+	get order(     ) { return props.order }
+	set order( val ) {
+		val         =
+		props.order = parseInt( val ) || 0;
+
+		this.Css( 'order', val );
+	}
+
+	get value(     ) { return props.value ?? '' }
+	set value( val ) { props.value = val }
+
 	get active(     ) { return !!props.active }
 	set active( val ) {
 		props.active = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
@@ -100,34 +127,10 @@ class {
 		this.Trigger( 'change' , props.active, this.value );
 	}
 
-	get value(     ) { return props.value ?? '' }
-	set value( val ) { props.value = val }
-
-	get order(     ) { return props.order }
-	set order( val ) {
-		val         =
-		props.order = parseInt( val ) || 0;
-
-		this.Css( 'order', val );
-	}
-
-	get cont(     ) { return refs.cont }
-
 	// front-private
 	onClose( event ) {
 		event.stopPropagation();
 
 		this.Trigger( 'close' );
-	}
-
-	// front-public
-	Clone( element ) {
-		if ( !element || element.tagName!=='MX-TAB' ) return;
-
-		const pos = element.Position( 'off' );
-
-		this.active     = element.active;
-		this.style.top  = `${pos.top}px`;
-		this.style.left = `${pos.left}px`;
 	}
 }

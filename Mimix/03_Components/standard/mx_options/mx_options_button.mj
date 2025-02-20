@@ -121,9 +121,7 @@ class {
 	}
 
 	// front-public
-	get open(     ) {
-		return props.open;
-	}
+	get open(     ) { return props.open }
 	set open( val ) {
 		val = typeof val==='string' ? !( !val || val.match( /false/i ) ) : !!val;
 
@@ -136,8 +134,13 @@ class {
 		refs.arrow.html = `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">${ props.open ? icons.open : icons.close }</svg>`;
 	}
 
+	get value(     ) { return props.value }
+	set value( val ) { props.value = val }
+
 	// front-private
-	onClick() {
+	onClick( event ) {
+		event.stopPropagation();
+
 		this.open = !this.open;
 	}
 }

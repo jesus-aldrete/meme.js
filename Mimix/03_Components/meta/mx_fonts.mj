@@ -1,20 +1,22 @@
 class {
 	Tag() {
-		/* Declaraciones */
-		const { config                  } = this;
-		const { ParsePath, FetchBigJSON } = require( 'meme:lib'          );
-		const FontInfo                    = require( 'meme:mx_font_info' );
-		const cache                       = Cache();
+		/*/ ***** Declaraciones ***** /*/
+		const lib      = require( 'meme:lib'          );
+		const courier  = require( 'meme:courier'      );
+		const FontInfo = require( 'meme:mx_font_info' );
+		const gthis    = this;
+		const cache    = Cache();
+		const cirro    = await courier.ConnectClient( this.config.cirromatic ).catch( e => console.Error( e ) );
 
 		/* Cache */
 		function Cache() {
 			/* Declaraciones */
 			let   cache      = {};
-			const cache_path = config.constants.work_space.path + '/fonts.meme.cache';
+			const cache_path = [[work_space]].path + '/fonts.meme.cache';
 
 			/* Metodos */
 			function Load() {
-				const ofile = ParsePath( cache_path );
+				const ofile = lib.ParsePath( cache_path );
 
 				if ( ofile.type!=='file' ) return {};
 
@@ -28,8 +30,7 @@ class {
 					return json;
 				}
 				catch( e ) {
-					console.Error( `cd[mx_fonts:Load:LoadCache]: ${e.message}` );
-					console.trace();
+					console.Error( MemeError( 'bad load', e.message ).ParseConsole() );
 
 					return {};
 				}
@@ -45,7 +46,7 @@ class {
 					}
 				}
 
-				const ofile = ParsePath( cache_path );
+				const ofile = lib.ParsePath( cache_path );
 
 				ofile.Write( JSON.stringify( cac, 0, '\t' ) );
 			}
@@ -68,10 +69,10 @@ class {
 			const fonts  = {};
 			const ofiles = [];
 
-			for ( const source of config.res.sources ) {
+			for ( const source of gthis.config.res.sources ) {
 				source.Travel({
 					filter: [/\.(otf|ttf|woff2?)$/i],
-					ignore: config.res.ignore,
+					ignore: gthis.config.res.ignore,
 					call  : ( ofile ) => {
 						ofile.url = ofile.path.replace( source.path, '' );
 
@@ -85,7 +86,7 @@ class {
 
 				let info;
 
-				if ( ofile.ext==='.woff2' ) info = await driver.Trigger( 'CirroMatic/font/info', { format:'.woff2', buffer:ofile.data.toString( 'base64' ) } );
+				if ( ofile.ext==='.woff2' ) info = await cirro.Trigger( 'CirroMatic/font/info', { format:'.woff2', buffer:ofile.data.toString( 'base64' ) } );
 				else                        info = FontInfo( ofile.data );
 
 				if ( !info?.full_name ) continue;
@@ -158,11 +159,13 @@ class {
 
 				console.Info( `fm[Transformando fuente:] ${font.info.full_name}, fm[formatos:] [${formats.join( ', ' )}]` );
 
-				const res = await driver.Trigger( 'CirroMatic/font/convert', { formats, format:font.ext, buffer:font.data.toString( 'base64' ) } );
+				const res = await cirro.Trigger( 'CirroMatic/font/convert', { formats, format:font.ext, buffer:font.data.toString( 'base64' ) } );
+
+				if ( !res ) return console.Error( MemeError( 'bad convert', 'no fue posible convertir las fuentes' ).ParseConsole() );
 
 				for ( const [format, buffer] of Object.entries( res ) ) {
 					iss                  = true;
-					const new_font       = font[format] = ParsePath( font.path );
+					const new_font       = font[format] = lib.ParsePath( font.path );
 					const rex            = new RegExp( `\\${font.ext}$`, 'i' );
 					new_font.base        = font.base.replace( rex, '.' + format );
 					new_font.ext         = '.' + format;
@@ -221,9 +224,10 @@ class {
 
 		/* Inicio */
 		async function Inicio() {
-			const conet = await driver.Connect( '[[token_matic]]' );
-			const fonts = await GetFonts();
+			if ( !cirro ) return console.Error( MemeError( 'bad connection', 'no fue posible conectarce a CirroMaric' ).ParseConsole() );
 
+			const fonts =
+			await GetFonts(       );
 			await GetProcs( fonts );
 			await SendRes ( fonts );
 

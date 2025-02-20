@@ -4,17 +4,27 @@ class extends mx_input_box {
 
 	// front-public
 	View () {
-		select*select#{this.id_input} (focus)=onFocus (blur)=onBlur (change)=onChange>{this.body}
+		select*select#{this.id_input} (click)=onClick (focus)=onFocus (blur)=onBlur (change)=onChange>{this.body}
 		*value
 		mx_svg.icon icon=fill:caret-down
 	}
 	Style() {/* Tema */
 		@theme-light
+			--back                : $!back_75|#f4f4f4
+			--border              : $!back_35|#a2a2a2
+			--size                : 2px
 			--icon-color          : $!back_10|#2e2e2e
 			--_disabled_icon-color: $!soft_75|#979797
+
+			--_focus-border: $!high_10|#332e0d
 		@theme-dark
+			--back                : black
+			--border              : $!back_30|#8b8b8b
+			--size                : 1px
 			--icon-color          : $!high|#ffe743
 			--_disabled_icon-color: $!soft_70|#828282
+
+			--_focus-border: $!high|#ffe743
 	}
 	Style() {
 		cursor: default
@@ -35,6 +45,20 @@ class extends mx_input_box {
 			color : $icon-color
 			height: 19
 			width : 19
+
+		!.mx_select_custom_list
+			background-color: $back
+			border          : solid $size $border
+			border-radius   : 7
+			box-sizing      : border-box
+			display         : flex
+			flex-direction  : column
+			gap             : 3
+			padding         : 5
+			position        : fixed
+			z-index         : 10
+			::focus
+				border-color: $_focus-border
 	}
 	Style() {/* Estado */
 		&._disabled >.icon
@@ -61,24 +85,76 @@ class extends mx_input_box {
 
 	get value(     ) { return props.selected_option }
 	set value( val ) {
-		const options             = refs.select.options;
-		props.no_change           = true;
-		val                       = String( val );
-		refs.select.selectedIndex = -1;
+		if ( props.custom ) {
+			const div     = document.createElement( 'div' );
+			div.innerHTML = props.custom;
+			const element = div.querySelector( `[value="${val}"]` );
 
-		for ( const option of options ) {
-			if ( option.value==val || option.html==val ) {
-				refs.select.selectedIndex = option.index;
+			if ( element ) {
+				const value   = props.selected_option = {
+					element,
+					value  : element.Atts( 'value' ),
+				};
 
-				break;
+				refs.value.innerHTML = element.outerHTML;
 			}
-		}
+			else refs.value.innerHTML = '';
 
-		onChange({ target:refs.select });
-		props.no_change = undefined;
+			this.Class( '_fill' , !!refs.value.innerHTML );
+		}
+		else {
+			const options             = refs.select.options;
+			props.no_change           = true;
+			val                       = String( val );
+			refs.select.selectedIndex = -1;
+
+			for ( const option of options ) {
+				if ( option.value==val || option.html==val ) {
+					refs.select.selectedIndex = option.index;
+
+					break;
+				}
+			}
+
+			onChange({ target:refs.select });
+			props.no_change = undefined;
+		}
 	}
 
+	get custom(     ) { return props.custom }
+	set custom( val ) { props.custom = val  }
+
 	// front-private
+	onClick ( event ) {
+		if ( !props.custom ) return;
+
+		event.preventDefault();
+		event.stopPropagation();
+
+		const menu_all = document.querySelectorAll( '.mx_select_custom_list' );
+
+		menu_all.forEach( v => v.Remove() );
+
+		document.body.Add({mh .mx_select_custom_list tabindex=0>{props.custom}});
+
+		const menu = refs.list = document.querySelector( '.mx_select_custom_list' );
+		const pos  = this.Position();
+		const per  = menu.Position();
+		let   top  = pos.top + pos.height + 2;
+		let   lef  = pos.left;
+
+		menu.style.minWidth = `${pos.width}px`;
+		menu.style.top      = `${top}px`;
+		menu.style.left     = `${lef}px`;
+
+		menu.focus();
+
+		this.Events( 'mx_select_list', [
+			{ element:menu, callback:onMenuClick, event:`click` },
+			{ element:menu, callback:onMenuFocus, event:`focus` },
+			{ element:menu, callback:onMenuBlur , event:`blur`  },
+		]);
+	}
 	onFocus (       ) {
 		this.Class( '_focus', true );
 	}
@@ -93,7 +169,7 @@ class extends mx_input_box {
 		const selected_option        =
 		props.selected_option        = options[options.selectedIndex];
 
-		if ( selected_option.html ) {
+		if ( selected_option?.html ) {
 			refs.value.html = selected_option.html;
 
 			this.Class( '_fill', true );
@@ -107,5 +183,40 @@ class extends mx_input_box {
 		if ( !props.no_change ) {
 			this.Trigger( 'change', selected_option );
 		}
+	}
+
+	onMenuClick( event ) {
+		clearTimeout( props.timer_list );
+
+		const element = event.target.closest( '[value]' );
+
+		if ( element ) {
+			const value = props.selected_option = {
+				element,
+				value  : element.Atts( 'value' ),
+			};
+
+			refs.value.innerHTML = element.outerHTML;
+
+			this.Class  ( '_fill' , true                  );
+			this.Trigger( 'change', props.selected_option );
+			refs.list?.Remove();
+		}
+
+		refs.list.focus();
+	}
+	onMenuFocus( event ) {
+		console.log( 234234243 );
+	}
+	onMenuBlur ( event ) {
+		clearTimeout( props.timer_list );
+
+		props.timer_list = setTimeout(
+			() => {
+				this.Events( 'mx_select_list', false );
+				refs.list.Remove();
+			},
+			50
+		);
 	}
 }

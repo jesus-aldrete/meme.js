@@ -1,11 +1,13 @@
-/* Declaraciones */
+
+
+/*/ ***** Declaraciones ***** /*/
 let id_connection = null;
 let is_connect    = false;
 let collection    = null;
 // ####################################################################################################
 
 
-/* Metodos */
+/*/ ***** Metodos ***** /*/
 async function Connect( params ) {
 	if ( is_connect ) return true;
 
@@ -64,6 +66,6 @@ async function Delete( params ) {
 // ####################################################################################################
 
 
-/* Exportaciones */
+/*/ ***** Exportaciones ***** /*/
 module.exports = { Connect, Getter, Insert, Update, Delete };
 // ####################################################################################################

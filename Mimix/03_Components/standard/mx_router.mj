@@ -1,4 +1,41 @@
 class {
+/*/ ***** Funciones ***** /*/
+	// front-private
+	UpdateParams( params ) {
+		const par = Object.assign( onParams(), params );
+		let   res = '';
+
+		for ( const [key, value] of Object.entries( par ) ) {
+			if ( value===undefined ) continue;
+
+			if ( res ) res+= '&';
+
+			res+= `${key}=${value}`;
+		}
+
+		const uri = {};
+
+		for ( const [key,value] of Object.entries( window.location ) ) {
+			if ( typeof value==='string' ) {
+				uri[key] = value;
+			}
+		}
+
+		if ( uri.search ) {
+			uri.search = '';
+			uri.href   = uri.origin + uri.pathname;
+		}
+
+		if ( res ) {
+			uri.search = '?' + res;
+			uri.href   = uri.origin + uri.pathname + uri.search;
+		}
+
+		return uri;
+	}
+
+/*/ ***** Front ***** /*/
+	// front-public
 	View   () {
 		! \
 			(mx/router/push)   =onNavPush \
@@ -103,39 +140,5 @@ class {
 		const uri = UpdateParams( params );
 
 		history.replaceState( uri, '', uri.href );
-	}
-
-	// front-private
-	UpdateParams( params ) {
-		const par = Object.assign( onParams(), params );
-		let   res = '';
-
-		for ( const [key, value] of Object.entries( par ) ) {
-			if ( value===undefined ) continue;
-
-			if ( res ) res+= '&';
-
-			res+= `${key}=${value}`;
-		}
-
-		const uri = {};
-
-		for ( const [key,value] of Object.entries( window.location ) ) {
-			if ( typeof value==='string' ) {
-				uri[key] = value;
-			}
-		}
-
-		if ( uri.search ) {
-			uri.search = '';
-			uri.href   = uri.origin + uri.pathname;
-		}
-
-		if ( res ) {
-			uri.search = '?' + res;
-			uri.href   = uri.origin + uri.pathname + uri.search;
-		}
-
-		return uri;
 	}
 }

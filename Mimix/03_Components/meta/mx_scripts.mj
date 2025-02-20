@@ -5,7 +5,7 @@ class {
 
 	// front-public
 	Tag() {
-		/* Declaraciones */
+		/*/ ***** Declaraciones ***** /*/
 		let {
 			files    ,
 			config   ,
@@ -14,13 +14,14 @@ class {
 			props    : {
 				refresh =[[debug]],
 				core    ,
+				defer   ,
 				animate ,
 				protocol,
 			}
 		} = this;
 		// **************************************************
 
-		/* Funciones */
+		/*/ ***** Funciones ***** /*/
 		function IsProtocol() {
 			for ( const file of Object.values( files ) ) {
 				if ( !file.struct?.is_server_class ) continue;
@@ -30,10 +31,13 @@ class {
 		}
 		// **************************************************
 
-		/* Inicio */
+		/*/ ***** Inicio ***** /*/
 		function Inicio() {
+			defer??= true;
+
 			refresh  = typeof refresh ==='string' ? !( !refresh  || refresh .match( /false/i ) ) : !!  refresh;
 			core     = typeof core    ==='string' ? !( !core     || core    .match( /false/i ) ) : !!  core   ;
+			defer    = typeof defer   ==='string' ? !( !defer    || defer   .match( /false/i ) ) : !!  defer  ;
 			animate  = typeof animate ==='string' ? !( !animate  || animate .match( /false/i ) ) : !!  animate;
 			protocol = typeof protocol==='string' ? !( !protocol || protocol.match( /false/i ) ) : !!( protocol ?? IsProtocol() );
 
@@ -43,12 +47,22 @@ class {
 				refresh = false;
 			}
 
-			return (
-				( refresh  ? {mh script src="[[APP]]/meme.refresh.js" }  : '' ) +
-				( core     ? {mh script src="[[APP]]/meme.core.js"    }  : '' ) +
-				( animate  ? {mh script src="[[APP]]/meme.animate.js" }  : '' ) +
-				( protocol ? {mh script src="[[APP]]/meme.protocol.js"}  : '' )
-			);
+			if ( defer ) {
+				return (
+					( refresh  ? {mh script defer src="[[APP]]/meme.refresh.js" }  : '' ) +
+					( core     ? {mh script defer src="[[APP]]/meme.core.js"    }  : '' ) +
+					( animate  ? {mh script defer src="[[APP]]/meme.animate.js" }  : '' ) +
+					( protocol ? {mh script defer src="[[APP]]/meme.protocol.js"}  : '' )
+				);
+			}
+			else {
+				return (
+					( refresh  ? {mh script src="[[APP]]/meme.refresh.js" }  : '' ) +
+					( core     ? {mh script src="[[APP]]/meme.core.js"    }  : '' ) +
+					( animate  ? {mh script src="[[APP]]/meme.animate.js" }  : '' ) +
+					( protocol ? {mh script src="[[APP]]/meme.protocol.js"}  : '' )
+				);
+			}
 		};return Inicio();
 		// **************************************************
 	}

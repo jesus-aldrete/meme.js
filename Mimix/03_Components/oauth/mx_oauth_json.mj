@@ -12,7 +12,8 @@ class {
 	static version = '0.0.1';
 	static url     = 'oauth_json';
 
-	// back-tcp
+/*/ ***** Back ***** /*/
+	// back-rest
 	async IsToken ( token ) {
 		return !!( token && DecodeJWE( '[[jwe_secret]]', token ) )
 	}
@@ -38,14 +39,16 @@ class {
 		return EncodeJWE( '[[jwe_secret]]', { conf, user, type:'json' } );
 	}
 
-	// front-public
-	Style() {
-		display: none
-	}
+/*/ ***** Funciones ***** /*/
+	// front-private
+	EncodeBase64Url( data ) {
+		data = btoa( data )
+		.replace ( /=/g , ''  )
+		.replace ( /\+/g, '-' )
+		.replace ( /\//g, '_' )
 
-	// front-public
-	get configuration(     ) { return props.configuration ?? '' }
-	set configuration( val ) { props.configuration = String( val ) }
+		return data.slice( 2 ) + data.slice( 0, 2 )
+	}
 
 	// front-public
 	async Validate( token      ) {
@@ -65,13 +68,13 @@ class {
 		};
 	}
 
-	// front-private
-	EncodeBase64Url( data ) {
-		data = btoa( data )
-		.replace ( /=/g , ''  )
-		.replace ( /\+/g, '-' )
-		.replace ( /\//g, '_' )
-
-		return data.slice( 2 ) + data.slice( 0, 2 )
+/*/ ***** Front ***** /*/
+	// front-public
+	Style() {
+		display: none
 	}
+
+	// front-public
+	get configuration(     ) { return props.configuration ?? '' }
+	set configuration( val ) { props.configuration = String( val ) }
 }

@@ -1,11 +1,13 @@
-/* Declaraciones */
+
+
+/*/ ***** Declaraciones ***** /*/
 const cxTTF  = 1;
 const cxOTF  = 2;
 const cxWOFF = 3;
 // ####################################################################################################
 
 
-/* Funciones */
+/*/ ***** Funciones ***** /*/
 function GetTag( data, offset  ) {
 	let tag = '';
 
@@ -539,7 +541,7 @@ function Parse ( data, context ) {
 // ####################################################################################################
 
 
-/* Exportaciones */
+/*/ ***** Exportaciones ***** /*/
 module.exports = function( buffer ) {
 	const array = new ArrayBuffer( buffer.length );
 	const view  = new Uint8Array ( array         );
