@@ -2,7 +2,7 @@
 	"name": "meme-icons",
 	"displayName": "meme.js Icons",
 	"description": "Meme Icons for Visual Studio Code",
-	"version": "3.12.10",
+	"version": "3.13.10",
 	"publisher": "memejs",
 	"license": "MIT",
 	"icon": "01_Resources/brand/logo.png",
