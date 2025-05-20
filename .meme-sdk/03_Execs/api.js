@@ -303,17 +303,18 @@ async function Load( project ) {
 			for (  const it of item?.childs||[] ) rec( item, it );
 			if  ( !item.ref                     ) return;
 
-			switch ( item.type ) {
-				case 'table':
-					REFS.global                ??= {};
-					ofile.clouds_refs          ??= {};
-					REFS[ofile.name]           ??= {};
-					ofile.clouds_refs[item.name] =
-					REFS[ofile.name ][item.name] = orm( CONFIG.constants.work_space.path, parent, item );
-				break;
+			const ref = orm( CONFIG.constants.work_space.path, parent, item );
 
-				default: console.Error( (new meme_error( 'bad case', `el elemento de tipo: "${item.type}"` )).cmd() );
-			}
+			if ( !ref ) return;
+
+			ref._work_space                        = CONFIG.constants.work_space.path;
+			ref._parent                            = parent;
+			ref._reference                         = item;
+			REFS.global                          ??= {};
+			ofile.clouds_refs                    ??= {};
+			REFS[ofile.name]                     ??= {};
+			ofile.clouds_refs[item.ref||item.name] =
+			REFS[ofile.name ][item.ref||item.name] = ref;
 		};
 
 		for ( const item of clouds ) {
@@ -806,6 +807,35 @@ async function Build( project ) {
 			}
 		}
 	}
+	function WriteClouds() {
+		for ( const file of Object.values( FILES ) ) {
+			if ( file.clouds_refs ) {
+				const json = JSON.stringify(
+					file.clouds_refs,
+					( _, value ) => {
+						if ( typeof value==='function' ) {
+							return `$F${value.toString()}`;
+						}
+
+						return value;
+					}
+				);
+
+				ParsePath( CONFIG.build.path, 'api', 'clouds', file.name+'.json' ).Write( json );
+			}
+		}
+
+		const driver = ParsePath( __dirname, '../02_Libs/courier.js' );
+
+		if ( driver.type!=='file' ) console.Error( `cd[no fue posible encontrar el archivo de driver:] ${driver.path}` );
+		else {
+			let
+			cont = driver.Read();
+			cont = cont.replace( /module\.exports\s*\=\s*\{/gm, `module.exports = { port:${CONFIG.cirromatic.port}, host:'${CONFIG.cirromatic.host}',` );
+
+			ParsePath( CONFIG.build.path, 'api', 'lib', 'courier.js' ).Write( cont );
+		}
+	}
 	function WriteServer() {
 		const dbuild  = CONFIG.build;
 		let   fconect = Connect.toString();
@@ -828,7 +858,8 @@ async function Build( project ) {
 		if ( project.id!==ID ) return;
 
 		if ( await CONFIG.tasks.Exec({ moment:'build', config:CONFIG, files:FILES, urls:URLS, transpilers:COMPILERS }) ) {
-			WriteFiles();
+			WriteFiles ();
+			WriteClouds();
 		}
 
 		DRIVER.Trigger( 'project/build/end', { id:ID, type:'api' } );
@@ -1488,6 +1519,7 @@ async function Connect( project ) {
 					case 'number'    : result.code??=200; result.type??='string'; result.body=result.body.toString(); break;
 					case 'boolean'   : result.code??=200; result.type??='string'; result.body=result.body.toString(); break;
 					case 'array'     :
+					case 'error'     :
 					case 'object'    : result.code??=200; result.type??='json'  ; result.body=JSON.stringify( result.body ); break;
 					case 'uint8array': result.code??=200; result.type??='buffer'; result.headers={ 'Content-Length':result.body.byteLength }; break;
 				}

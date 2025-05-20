@@ -472,16 +472,15 @@ function ExecCommand( cwd, command ) {
 	if ( result.error ) {
 		console.Error( `Error al ejecutar el comando cd["${command}"]: ${result.error.message}` );
 
-		return { error:`Error al ejecutar el comando cd["${command}"]: ${result.error.message}`, message:result.error.message };
+		return new meme_error( 'bad execution', result.error.message );
 	}
 	else if ( result.status!==0 ) {
-		console.Error( `El comando cd["${command}"] se ejecutó, pero falló:` );
-		console.Error( result.stderr                                         );
+		console.Error( `El comando cd["${command}"] se ejecutó, pero falló: ${result.stderr}` );
 
-		return { error:`Error al ejecutar el comando cd["${command}"]`, message:result.stderr };
+		return new meme_error( 'bad execution', result.stderr );
 	}
 
-	return { ok:true, message:result.stderr };
+	return { ok:true, message:result.stdout||result.stderr };
 }
 class meme_error extends Error {
 	constructor( type, message, code ) {

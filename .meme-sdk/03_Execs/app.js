@@ -354,23 +354,28 @@ async function Load( project ) {
 		}
 		async function SearchRepos( clase ) {
 			let fil;
+			let cla;
+			let pat = ParsePath( clase );
+
+			if ( pat.ext ) cla = pat.base;
+			else           cla = pat.name + '.mj';
 
 			for_files:
 			for ( const orepo of CONFIG.repositories ) {
 				switch ( orepo.type ) {
 					case 'folder':
-						fil = orepo.Travel({ filter:[`/${clase}\\.mj/i`] })[0];
+						fil = orepo.Travel({ filter:[`/${cla}$/i`] })[0];
 
 						if ( fil ) break for_files;
 					break;
 
 					case 'url':
-						let url = orepo.path + ( orepo.path.at( -1 )==='/' ? '' : '/' ) + clase + '.mj';
+						let url = orepo.path + ( orepo.path.at( -1 )==='/' ? '' : '/' ) + cla;
 						let res = await fetch( url );
 
 						if ( res.ok ) {
 							res = await res.text();
-							fil = { clase, name:clase, ext:'.mj', type:'url', path:url, data:res, Read:()=>res };
+							fil = { ext:pat.ext, clase, name:clase, type:'url', path:url, data:res, Read:()=>res };
 							console.Info( `cd[Download source:] fc[${ url }]` );
 							break for_files;
 						}
@@ -794,6 +799,7 @@ async function Load( project ) {
 		oparse.struct = await TRANSPILERS.ParseMJ    ( oparse.Read(), oparse              );
 		oparse.code   = await TRANSPILERS.WriteModule( oparse.struct, oparse              );
 		oparse.code   = await TRANSPILERS.WriteMapLib( oparse.data  , oparse.code, oparse );
+		oparse.url    = url;
 
 		try {
 			node_modules._compile( `module.return=eval( ${ JSON.stringify( oparse.code ) } )`, oparse.path );
@@ -807,7 +813,7 @@ async function Load( project ) {
 
 		return null;
 	}
-	async function ExecScripts( code, params, ofile ) {
+	async function ExecScripts( code, params, ofile_element, ofile_write ) {
 		try {
 			return await Object.getPrototypeOf( async function() {} )
 			.constructor( 'require', 'require_meme', 'refs', code )
@@ -825,11 +831,13 @@ async function Load( project ) {
 				},
 				require,
 				require_meme,
-				REFS[ofile.name]
+				REFS[ofile_element.name]
 			).catch( e => { throw e });
 		}
 		catch ( e ) {
-			ofile && console.Error( ofile.path );
+			if ( !ofile_write ) ofile_write = ofile_element;
+
+			ofile_write && console.Error( ofile_write.path );
 
 			console.Error( e.stack );
 		}
@@ -850,17 +858,15 @@ async function Load( project ) {
 			for (  const it of item?.childs||[] ) rec( item, it );
 			if  ( !item.ref                     ) return;
 
-			switch ( item.type ) {
-				case 'table':
-					REFS.global                ??= {};
-					ofile.clouds_refs          ??= {};
-					REFS[ofile.name]           ??= {};
-					ofile.clouds_refs[item.name] =
-					REFS[ofile.name ][item.name] = orm( CONFIG.constants.work_space.path, parent, item );
-				break;
+			const ref = orm( CONFIG.constants.work_space.path, parent, item );
 
-				default: console.Error( (new meme_error( 'bad case', `el elemento de tipo: "${item.type}"` )).cmd() );
-			}
+			if ( !ref ) return;
+
+			REFS.global                          ??= {};
+			ofile.clouds_refs                    ??= {};
+			REFS[ofile.name]                     ??= {};
+			ofile.clouds_refs[item.ref||item.name] =
+			REFS[ofile.name ][item.ref||item.name] = ref;
 		};
 
 		for ( const item of clouds ) {
@@ -922,6 +928,16 @@ async function Load( project ) {
 		async function GetRequires( ofile ) {
 			for ( const key in ofile.requires ) {
 				await RequireMemeBuild( key );
+			}
+
+			for ( const key in ofile.download ) {
+				const ofile_download = await cache.Get( key );
+
+				if ( ofile_download ) {
+					const fil = await Compile( ofile_download, false, ya );
+					console.Load( `fy[${ fil.url?.replace( /\]/g, '\\]' ) }] cd[${ fil.path?.replace( /\]/g, '\\]' ) }]` );
+				}
+				else console.Error( `no se encontro el archivo "fy[${key}]"` );
 			}
 		}
 		async function GetImports( ofile ) {
@@ -1394,7 +1410,7 @@ async function Load( project ) {
 				const meta_class = ftag.ofile.struct.class_name;
 
 				for ( const element of ( all_elements_groups[meta_class] || [] ) ) {
-					let meta_code = await ExecScripts( code, { element, file:element.ofile, props:element.params, all_elements, all_elements_groups }, element.ofile );
+					let meta_code = await ExecScripts( code, { element, file:element.ofile, props:element.params, all_elements, all_elements_groups }, ftag.ofile, element.ofile );
 
 					switch ( typeof meta_code ) {
 						case 'string': element.replace_meta_element = meta_code; break;
@@ -1416,6 +1432,7 @@ async function Load( project ) {
 				for ( const element of ( all_elements_groups[is_class] || [] ) ) {
 					element.params.is  = is_element.struct.custom_tag;
 					element.custom_tag = is_element.struct.extends_tag;
+					element.clase.push( element.tag );
 				}
 			}
 		}

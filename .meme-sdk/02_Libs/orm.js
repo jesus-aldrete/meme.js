@@ -19,44 +19,35 @@ function ParseObject( obj ) {
 // ###################################################################################################
 
 
-/*/ ***** Get's POSTGRES ***** /*/
-function GetPostgres( work_space, reference ) {
-	return {
-		Getter  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/getter'  , work_space, reference.name, ParseObject( data ) ),
-		Insert  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/insert'  , work_space, reference.name, ParseObject( data ) ),
-		Update  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/update'  , work_space, reference.name, ParseObject( data ) ),
-		Delete  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/delete'  , work_space, reference.name, ParseObject( data ) ),
-		Beging  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/beging'  , work_space, reference.name, ParseObject( data ) ),
-		Commit  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/commit'  , work_space, reference.name, ParseObject( data ) ),
-		Rollback: ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/rollback', work_space, reference.name, ParseObject( data ) ),
-		Sql     : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/sql'     , work_space, reference.name, ParseObject( data ) ),
-	};
+/*/ ***** Metodos ***** /*/
+async function Exec( work_space, reference, data, joins ) {
+	data.$joins = joins;
+
+	return await global.cirromatic.Trigger( 'CirroMatic/postgres/exec', work_space, reference.name, ParseObject( data ) );
 }
-// ###################################################################################################
 
+function LeftOuterJoin( work_space, reference, table, data, joins ) {
+	let obj;
+	joins??= [];
 
-/*/ ***** Get's MONGO ***** /*/
-function GetMongo( work_space, reference ) {
-	return {
-		Getter: ( data )=>global.cirromatic.Trigger( 'CirroMatic/mongo/getter', work_space, reference.name, ParseObject( data ) ),
-		Insert: ( data )=>global.cirromatic.Trigger( 'CirroMatic/mongo/insert', work_space, reference.name, ParseObject( data ) ),
-		Update: ( data )=>global.cirromatic.Trigger( 'CirroMatic/mongo/update', work_space, reference.name, ParseObject( data ) ),
-		Delete: ( data )=>global.cirromatic.Trigger( 'CirroMatic/mongo/delete', work_space, reference.name, ParseObject( data ) ),
-	};
-}
-// ###################################################################################################
+	joins.push(obj={
+		side : 'left',
+		type : 'outer',
+		left : { reference                , table:reference.name },
+		right: { reference:table.reference, table:table.reference.name },
+	});
 
-
-/*/ ***** Get's ***** /*/
-function GetDB( work_space, reference ) {
-	switch ( reference.engine ) {
-		case 'mongo'   : return GetMongo   ( work_space, reference );
-		case 'postgres': return GetPostgres( work_space, reference );
+	for ( const key in data ) {
+		const lfield    = reference.childs.find( v => v.alias===key || v.name===key );
+		const rfield    = table.reference.childs.find( v => v.alias===data[key] || v.name===data[key] );
+		obj.left .field = lfield?.name;
+		obj.right.field = rfield?.name;
 	}
 
-	console.Error( new meme_error( 'bad case', `motor no considerado, "${reference.engine}"` ) );
-
-	return {};
+	return {
+		Exec         : (        data )=>Exec         ( work_space, reference,        data, joins ),
+		LeftOuterJoin: ( table, data )=>LeftOuterJoin( work_space, reference, table, data, joins ),
+	};
 }
 // ###################################################################################################
 
@@ -65,7 +56,7 @@ function GetDB( work_space, reference ) {
 module.exports = function( work_space, parent, reference ) {
 	let res = null;
 
-	switch ( parent.type ) {
+	switch ( parent.tag ) {
 		case 'database':
 			switch ( parent.engine ) {
 				case 'mongo':
@@ -78,22 +69,48 @@ module.exports = function( work_space, parent, reference ) {
 
 				case 'postgres':
 					return {
-						Getter  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/getter'  , work_space, reference.name, ParseObject( data ) ),
-						Insert  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/insert'  , work_space, reference.name, ParseObject( data ) ),
-						Update  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/update'  , work_space, reference.name, ParseObject( data ) ),
-						Delete  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/delete'  , work_space, reference.name, ParseObject( data ) ),
-						Beging  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/beging'  , work_space, reference.name, ParseObject( data ) ),
-						Commit  : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/commit'  , work_space, reference.name, ParseObject( data ) ),
-						Rollback: ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/rollback', work_space, reference.name, ParseObject( data ) ),
-						Sql     : ( data )=>global.cirromatic.Trigger( 'CirroMatic/postgres/sql'     , work_space, reference.name, ParseObject( data ) ),
+						reference    ,
+						Getter       : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/getter'  , work_space, reference.name, ParseObject( data          ) ),
+						Insert       : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/insert'  , work_space, reference.name, ParseObject( data          ) ),
+						Update       : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/update'  , work_space, reference.name, ParseObject( data          ) ),
+						Delete       : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/delete'  , work_space, reference.name, ParseObject( data          ) ),
+						Beging       : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/beging'  , work_space, reference.name, ParseObject( data          ) ),
+						Commit       : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/commit'  , work_space, reference.name, ParseObject( data          ) ),
+						Rollback     : ( data          )=>global.cirromatic.Trigger( 'CirroMatic/postgres/rollback', work_space, reference.name, ParseObject( data          ) ),
+						Sql          : ( sql  , params )=>global.cirromatic.Trigger( 'CirroMatic/postgres/sql'     , work_space, reference.name, ParseObject({ sql, params }) ),
+						LeftOuterJoin: ( table, fields )=>LeftOuterJoin( work_space, reference, table, fields ),
 					};
-				break;
 
 				default: res = new meme_error( 'bad case', `engine no considerado, "${parent.engine}"` );
 			}
 		break;
 
-		default: res = new meme_error( 'bad case', `servicio no considerado, "${parent.type}"` );
+		default:
+			switch ( reference.tag ) {
+				case 'crypto':
+					return {
+						Create : ( user, pass        ) => global.cirromatic.Trigger( 'CirroMatic/crypto/create' , work_space, reference, user, pass        ),
+						Compare: ( user, pass, value ) => global.cirromatic.Trigger( 'CirroMatic/crypto/compare', work_space, reference, user, pass, value ),
+					};
+
+				case 'database':
+					return {
+						Get: ( key        )=>global.cirromatic.Trigger( 'CirroMatic/redis/getter', work_space, key                       ),
+						Set: ( key, value )=>global.cirromatic.Trigger( 'CirroMatic/redis/setter', work_space, key, ParseObject( value ) ),
+					};
+
+				case 'openia':
+					return {
+						Chat: ( data )=>global.cirromatic.Trigger( 'CirroMatic/openia/chat', work_space, reference, data ),
+					};
+				break;
+			}
+
+			res = new meme_error( 'bad case', `servicio no considerado, "${parent.tag}"` );
+	}
+
+	if ( res.error ) {
+		console.Error( res.cmd() );
 	}
 
 	return res;

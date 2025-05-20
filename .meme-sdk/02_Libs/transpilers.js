@@ -650,6 +650,25 @@ module.exports = function() {
 
 			return cad[pos]==='{';
 		}
+		function IsCloudFunctionJS( cad, pos ) {
+			if (
+				!(
+					cad[pos    ]==='C' &&
+					cad[pos + 1]==='l' &&
+					cad[pos + 2]==='o' &&
+					cad[pos + 3]==='u' &&
+					cad[pos + 4]==='d' &&
+					cad[pos + 5]==='J' &&
+					cad[pos + 6]==='S' &&
+					( ( pos + 7 )>=cad.length || IsSpecial( cad, pos + 7 ) ) &&
+					( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
+				)
+			) return false;
+
+			for ( pos+= 7; pos<cad.length && ( IsSpaces( cad, pos ) || cad[pos]==='(' || cad[pos]===')' ); pos++ );
+
+			return cad[pos]==='{';
+		}
 		function IsStyleFunction( cad, pos ) {
 			if (
 				!(
@@ -951,14 +970,13 @@ module.exports = function() {
 			return [res, pos];
 		}
 		function GetSuper( res, cad, pos ) {
-			for ( ;pos<cad.length; pos++ ) {
-				switch ( cad[pos] ) {
-					case '.': return [res + '_', --pos];
-					default : res+= cad[pos];
-				}
-			}
+			pos+= 5;
 
-			return [res, pos];
+			for ( ;pos<cad.length && IsSpacesTabs( cad, pos ); pos++ );
+
+			res+= 'psupe';
+
+			return [res, pos - 1];
 		}
 		async function GetRequire( res, cad, pos, ctx ) {
 			const pov = pos;
@@ -1024,9 +1042,9 @@ module.exports = function() {
 				const proc_childs = ( parent, element ) => {
 					parent = Object.assign(
 						{
-							type: element.tag,
-							name: element.id  || undefined,
+							tag : element.tag,
 							ref : element.ref || undefined,
+							name: element.id  || undefined,
 						}
 						,
 						element.params
@@ -1052,6 +1070,22 @@ module.exports = function() {
 			}
 
 			return pos;
+		}
+		async function GetCloudFunctionJS( cad, pos ) {
+			const pov = pos;
+
+			for ( ;pos<cad.length && cad[pos]!=='{'; pos++ );
+
+			let code    ;
+			[code, pos] = await GetJS( '', cad, pos, false, cxBuild );
+			code        = await TranspileEnd( code, ofile, true );
+			code        = await WriteMapBuild( cad, code, pov, ofile );
+			code        = await EXEC( code, { ofile }, ofile ) ?? '';
+
+			ofile.clouds.push( ...code );
+			await CLOUD( code, ofile );
+
+			return pos+1;
 		}
 
 		/* Get HTML */
@@ -1387,9 +1421,10 @@ module.exports = function() {
 					break;
 
 					case 'C':
-						if      ( IsClass        ( cad, pos ) ) ofile.is_Class_in_js = true;
-						else if ( IsCss          ( cad, pos ) ) ofile.is_Css_in_js   = true;
-						else if ( IsCloudFunction( cad, pos ) ) pos                  = await GetCloudFunction( cad, pos );
+						if      ( IsClass          ( cad, pos ) ) ofile.is_Class_in_js = true;
+						else if ( IsCss            ( cad, pos ) ) ofile.is_Css_in_js   = true;
+						else if ( IsCloudFunction  ( cad, pos ) ) pos                  = await GetCloudFunction  ( cad, pos );
+						else if ( IsCloudFunctionJS( cad, pos ) ) pos                  = await GetCloudFunctionJS( cad, pos );
 
 						res+= cad[pos];
 					break;
@@ -1611,6 +1646,7 @@ module.exports = function() {
 				context = cxJS;
 			}
 
+			ofile.download  ??= {};
 			ofile.requires  ??= {};
 			ofile.elements  ??= [];
 			ofile.imports   ??= {};
@@ -1969,6 +2005,22 @@ module.exports = function() {
 				( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
 			);
 		}
+		function IsContainer( cad, pos ) {
+			return (
+				cad[pos    ]==='@' &&
+				cad[pos + 1]==='c' &&
+				cad[pos + 2]==='o' &&
+				cad[pos + 3]==='n' &&
+				cad[pos + 4]==='t' &&
+				cad[pos + 5]==='a' &&
+				cad[pos + 6]==='i' &&
+				cad[pos + 7]==='n' &&
+				cad[pos + 8]==='e' &&
+				cad[pos + 9]==='r' &&
+				( ( pos + 10 )>=cad.length || IsSpecial( cad, pos + 10 ) ) &&
+				( ( pos - 1  )<0           || IsSpecial( cad, pos - 1  ) )
+			);
+		}
 		function IsSupports( cad, pos ) {
 			return (
 				cad[pos    ]==='@' &&
@@ -1982,6 +2034,22 @@ module.exports = function() {
 				cad[pos + 8]==='s' &&
 				( ( pos + 9 )>=cad.length || IsSpecial( cad, pos + 9 ) ) &&
 				( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
+			);
+		}
+		function IsContainer( cad, pos ) {
+			return (
+				cad[pos    ]==='@' &&
+				cad[pos + 1]==='c' &&
+				cad[pos + 2]==='o' &&
+				cad[pos + 3]==='n' &&
+				cad[pos + 4]==='t' &&
+				cad[pos + 5]==='a' &&
+				cad[pos + 6]==='i' &&
+				cad[pos + 7]==='n' &&
+				cad[pos + 8]==='e' &&
+				cad[pos + 9]==='r' &&
+				( ( pos + 10 )>=cad.length || IsSpecial( cad, pos + 10 ) ) &&
+				( ( pos - 1  )<0           || IsSpecial( cad, pos - 1  ) )
 			);
 		}
 		function IsThemeDark( cad, pos ) {
@@ -2032,6 +2100,21 @@ module.exports = function() {
 			for ( pos++; pos<cad.length && IsNumber( cad, pos ); pos++ );
 
 			return cad[pos]==='⎦';
+		}
+		function IsHexAlpha( cad, pos ) {
+			return (
+				cad[pos    ]==='h' &&
+				cad[pos + 1]==='e' &&
+				cad[pos + 2]==='x' &&
+				cad[pos + 3]==='_' &&
+				cad[pos + 4]==='a' &&
+				cad[pos + 5]==='l' &&
+				cad[pos + 6]==='p' &&
+				cad[pos + 7]==='h' &&
+				cad[pos + 8]==='a' &&
+				( ( pos + 9 )>=cad.length || IsSpecial( cad, pos + 9 ) ) &&
+				( ( pos - 1 )<0           || IsSpecial( cad, pos - 1 ) )
+			);
 		}
 
 		/* GET */
@@ -2278,6 +2361,36 @@ module.exports = function() {
 
 			return [res, pov];
 		}
+		function GetHexAlpha( res, cad, pos, name ) {
+			let ret = '';
+			let per = '';
+
+			pos+= 9;
+
+			for ( ;pos<cad.length && IsSpaces( cad, pos ); pos++ );
+
+			for_parent:
+			for ( pos++; pos<cad.length; pos++ ) {
+				switch ( cad[pos] ) {
+					case ',': break for_parent;
+					case '$': [ret, pos] = GetVariable( ret, cad, pos, name ); break;
+					default : ret       += cad[pos];
+				}
+			}
+
+			for_per:
+			for ( pos++; pos<cad.length; pos++ ) {
+				switch ( cad[pos] ) {
+					case ')': break for_per;
+					default : per+= cad[pos];
+				}
+			}
+
+			per = ( parseFloat( per ) || 0 ) * 100;
+			res+= `color-mix(in srgb, ${ret} ${per}%, transparent)`;
+
+			return [res, pos];
+		}
 
 		/* Parse */
 		function ParseProperty( line, level, parent ) {
@@ -2304,6 +2417,7 @@ module.exports = function() {
 
 			for ( con = true; pos<line.length && con; pos++ ) {
 				switch ( line[pos] ) {
+					case 'h'          : if ( IsHexAlpha      ( line, pos ) ) [res.value, pos] = GetHexAlpha      ( res.value, line, pos, res.name ); else res.value+= line[pos]; break;
 					case 'l'          : if ( IsLinearGradient( line, pos ) ) [res.value, pos] = GetLinearGradient( res.value, line, pos, res.name ); else res.value+= line[pos]; break;
 					case 'r': case 'R': if ( IsRgba          ( line, pos ) ) [res.value, pos] = GetRgba          ( res.value, line, pos, res.name ); else res.value+= line[pos]; break;
 					case 'c'          : if ( IsCalc          ( line, pos ) ) [res.value, pos] = GetCalc          ( res.value, line, pos, res.name ); else res.value+= line[pos]; break;
@@ -2356,6 +2470,7 @@ module.exports = function() {
 						else if ( IsFontface  ( cad, pos ) ) res.value+= cad[pos], res.type = tcFontface;
 						else if ( IsMedia     ( cad, pos ) ) res.value+= cad[pos], res.type = tcMedia;
 						else if ( IsSupports  ( cad, pos ) ) res.value+= cad[pos], res.type = tcMedia;
+						else if ( IsContainer ( cad, pos ) ) res.value+= cad[pos], res.type = tcMedia;
 						else if ( IsThemeDark ( cad, pos ) ) res.value+= cad[pos], res.type = tcThemeDark;
 						else if ( IsThemeLight( cad, pos ) ) res.value+= cad[pos], res.type = tcThemeLight;
 					break;
@@ -2803,12 +2918,19 @@ module.exports = function() {
 			}
 
 			if ( res.tag==='require' ) {
-				res.type               = thNone;
-				const cla              = res.params.component || res.params.module || '';
-				struct.is_client_class = true;
-				ofile .imports[cla]  ??= [];
+				res.type  = thNone;
+				const cla = res.params.component || res.params.module || '';
+				const dow = res.params.load;
 
-				ofile.imports[cla].push( res );
+				if ( dow ) {
+					ofile.download[dow] = res;
+				}
+
+				if ( cla ) {
+					struct.is_client_class = true;
+					ofile.imports[cla]   ??= [];
+					ofile.imports[cla].push( res );
+				}
 			}
 
 			if ( res.tag==='static' ) {
@@ -3639,7 +3761,8 @@ module.exports = function() {
 						for ( pos++; pos<cad.length && cad[pos]!=='❫'; tem+=cad[pos++] );
 
 						tem = ofile.groups[tem];
-						res+= await Write( tem, '', '', false, false );
+
+						if ( tem ) res+= await Write( tem, '', '', false, false );
 					break;
 
 					default: res+= cad[pos];
@@ -4384,9 +4507,9 @@ module.exports = function() {
 					case '[': pos = GetGroup( cad, pos ); break;
 
 					case '/':
-						if ( cad[pos+1]==='*' && cad[pos+2]==='f' && cad[pos+3]==='*' && cad[pos+4]==='/' ) {
-							pos = GetFunction( cad, pos ); break;
-						}
+						if      ( cad[pos+1]==='*' && cad[pos+2]==='f' && cad[pos+3]==='*' && cad[pos+4]==='/' ) pos    = GetFunction(     cad, pos );
+						else if ( IsComment( cad, pos )                                                        ) pos    = GetComment (     cad, pos );
+						else if ( IsRegExp ( cad, pos )                                                        ) [,pos] = GetRegExp  ( '', cad, pos );
 					break;
 				}
 			}
@@ -4394,7 +4517,7 @@ module.exports = function() {
 			return pos;
 		}
 		function GetStringTemplate( cad, pos ) {
-			for ( ;pos<cad.length; pos++ ) {
+			for ( pos++; pos<cad.length; pos++ ) {
 				switch ( cad[pos] ) {
 					case '\\': pos++; break;
 					case '`' : return pos;
@@ -4553,11 +4676,13 @@ module.exports = function() {
 				`}`
 			).replace( /\n|\r/gm, '\\n' ).replace( /\t/gm, '\\t' );
 
-			return (
+			const result = (
 				generate +
 				`\n//# sourceMappingURL=data:application/json;base64,${ ( new Buffer.from( map ) ).toString( 'base64' ) }` +
 				`\n//# sourceURL=${ encodeURIComponent( ofile.path ).replace( /%2F/g, '/' ) }`
 			);
+
+			return result;
 		};return await Inicio();
 	}
 	async function WriteMapLib( origin, generate, ofile ) {
@@ -4582,6 +4707,11 @@ module.exports = function() {
 
 		/* Inicio */
 		function Inicio() {
+			if ( generate.length>100000 ) {
+				console.Info( `no se mapeo: cd[fr["${ofile.path}"]]` );
+				return generate;
+			}
+
 			const vlqs = GetVLQS( generate, 0 );
 			const map  = (
 				`{` +

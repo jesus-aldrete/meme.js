@@ -70,10 +70,10 @@ function Spinner( title, spinners ) {
 			}
 		}
 
-		process.stdout.moveCursor     ( 0, 0                      );
-		process.stdout.cursorTo       ( 0                         );
-		process.stdout.clearScreenDown(                           );
-		process.stdout.write          ( Cmd( title + spin + ' ' ) );
+		process.stdout.moveCursor     ?.( 0, 0                      );
+		process.stdout.cursorTo       ?.( 0                         );
+		process.stdout.clearScreenDown?.(                           );
+		process.stdout.write          ?.( Cmd( title + spin + ' ' ) );
 
 		if ( !termine ) {
 			timer = setTimeout( onInterval, 80 );
@@ -135,7 +135,7 @@ async function Driver( port ) {
 				}
 
 				const log        = fs           .openSync( PATH_LOG.path, 'a' );
-				const subprocess = child_process.spawn( 'node', [PATH_DRIVER.path, `-driver_port=${port}`], { detached:true, stdio:['ignore', log, log] } );
+				const subprocess = child_process.spawn( process.execPath, [PATH_DRIVER.path, `-driver_port=${port}`], { detached:true, stdio:['ignore', log, log] } );
 
 				subprocess.unref();
 

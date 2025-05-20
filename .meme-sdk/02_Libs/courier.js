@@ -114,7 +114,7 @@ function ConnectServer({ host, port, onEnd }) {
 			const con      =
 			conections[id] = { id };
 
-			con.driver = await ConnectClient({ host:cof.host, port:cof.port, onEnd:()=>{ delete conections[id] } }).catch( console.log );
+			con.driver = await ConnectClient({ host:cof.host, port:cof.port, onEnd:()=>{ delete conections[id] } }).catch( console.info );
 
 			if ( !con.driver ) {
 				console.Error( `No se pudo conectar al driver a el cliente, host: ${cof.host}, port: ${cof.port}` );
